@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kartu Pelajar — MAN 3 HSS</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --g900:#0d4d25;--g800:#155f32;--g700:#1a7a3d;--g600:#1e8f47;
+  --g500:#2da44e;--g400:#4cba6a;--g300:#82d49a;--g100:#d4f0df;--g50:#edf9f2;
+  --gold:#c8a84b;--gold-dark:#9a7a2a;
+  --bg:#f4f7f5;--card:#fff;--border:#deeae2;
+  --txt:#162b1e;--txt2:#3d5c48;--txt3:#6d8c78;
+  --blue:#1565c0;--red:#c62828;--orange:#e65100;
+  --shadow:0 1px 3px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.1);
+  --r:10px;--rl:14px;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+  --font-h:'Lora',Georgia,serif;
+  --tr:all .18s ease;
+  --sb-grad:linear-gradient(160deg,#1c7a42 0%,#0d4d25 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased}
+#login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb-grad);position:relative;overflow:hidden}
+#login-page::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30Z' fill='none' stroke='rgba(255,255,255,.05)' stroke-width='1'/%3E%3C/svg%3E");background-size:60px 60px}
+#login-page::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(200,168,75,.14) 0%,transparent 70%);top:-180px;right:-180px}
+.lcard{background:var(--card);border-radius:20px;padding:40px 38px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.28);position:relative;z-index:1}
+.lbrand{text-align:center;margin-bottom:26px}
+.lemblem{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;border:3px solid var(--g300);overflow:hidden;background:var(--g50)}
+.lemblem img{width:100%;height:100%;object-fit:contain;display:none}
+.lem-em{font-size:32px}
+.linst{font-size:11px;font-weight:800;color:var(--g700);letter-spacing:.4px;margin-bottom:4px;line-height:1.4}
+.lschool{font-size:13px;font-weight:500;color:var(--txt2);margin-bottom:6px}
+.ltitle{font-size:24px;font-weight:800;color:var(--g900);margin-bottom:2px}
+.lsub{font-size:12px;color:var(--txt3)}
+.ldiv{height:1px;background:var(--border);margin:20px 0}
+.llbl{display:block;font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:5px}
+.linput{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font);color:var(--txt);background:var(--bg);transition:var(--tr);outline:none;margin-bottom:12px}
+.linput:focus{border-color:var(--g500);background:#fff;box-shadow:0 0 0 3px rgba(45,164,78,.1)}
+.lpwrap{position:relative;margin-bottom:12px}
+.lpwrap .linput{margin-bottom:0;padding-right:44px}
+.leye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--txt3)}
+.lbtn{width:100%;padding:13px;background:var(--g700);color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer;transition:var(--tr)}
+.lbtn:hover{background:var(--g800);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,122,61,.3)}
+.lerr{background:#ffebee;color:var(--red);border-radius:7px;padding:9px 13px;font-size:13px;margin-bottom:12px;display:none;border-left:3px solid var(--red)}
+#app{display:none;min-height:100vh}
+.alayout{display:flex;min-height:100vh}
+.sb{width:225px;background:var(--sb-grad);flex-shrink:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow:hidden}
+.sb::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M20 0 L40 20 L20 40 L0 20Z' fill='none' stroke='rgba(255,255,255,.04)' stroke-width='1'/%3E%3C/svg%3E");background-size:40px 40px;pointer-events:none}
+.sbh{padding:18px 14px 14px;border-bottom:1px solid rgba(255,255,255,.1);position:relative}
+.sblogo{display:flex;align-items:center;gap:10px}
+.sbem{width:38px;height:38px;background:rgba(255,255,255,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.18);flex-shrink:0;overflow:hidden}
+.sbem img{width:100%;height:100%;object-fit:contain;display:none}
+.sbsc{color:rgba(255,255,255,.92);font-size:11px;font-weight:700;line-height:1.3}
+.sbsc span{display:block;font-weight:400;font-size:10px;color:rgba(255,255,255,.42);margin-top:1px}
+.sbnav{flex:1;padding:10px 8px;overflow-y:auto}
+.sbsec{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:1px;padding:10px 10px 5px;text-transform:uppercase}
+.sbi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.62);font-size:13px;font-weight:500;transition:var(--tr);margin-bottom:2px;position:relative}
+.sbi:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.92)}
+.sbi.on{background:rgba(255,255,255,.15);color:#fff;font-weight:600}
+.sbi.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--gold);border-radius:0 3px 3px 0}
+.sbi-i{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sbbadge{margin-left:auto;background:var(--gold);color:var(--g900);font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;min-width:20px;text-align:center}
+.sbfooter{padding:10px 8px;border-top:1px solid rgba(255,255,255,.1)}
+.sbuser{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;margin-bottom:2px}
+.sbav{width:30px;height:30px;background:rgba(200,168,75,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid rgba(200,168,75,.25);flex-shrink:0}
+.sbun{font-size:12px;color:rgba(255,255,255,.82);font-weight:600}
+.sbur{font-size:10px;color:rgba(255,255,255,.35)}
+.sbout{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:rgba(255,100,100,.68);font-size:13px;font-weight:500;transition:var(--tr)}
+.sbout:hover{background:rgba(255,100,100,.1);color:rgba(255,120,120,.92)}
+.main{margin-left:225px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40}
+.tb-title{font-size:17px;font-weight:700;color:var(--g800)}
+.db-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:var(--tr);border:none;font-family:var(--font)}
+.step-dots{display:flex;gap:5px;align-items:center;margin-left:auto}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:var(--tr)}
+.sdot.done{background:var(--g400)}
+.sdot.act{background:var(--g600);width:22px;border-radius:4px}
+.tb-sub{font-size:12px;color:var(--txt3)}
+.content{padding:22px 24px;flex:1}
+.card{background:var(--card);border-radius:var(--rl);border:1px solid var(--border);padding:18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.ctitle{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+h2{font-family:var(--font-h);font-size:21px;color:var(--g800);margin-bottom:5px}
+.pdesc{font-size:13px;color:var(--txt3);margin-bottom:18px;line-height:1.6}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font);transition:var(--tr);white-space:nowrap}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0)}
+.bl{display:flex;width:100%;margin-bottom:7px}
+.bg{background:var(--g700);color:#fff}.bg:hover{background:var(--g800)}
+.bb{background:var(--blue);color:#fff}.bb:hover{background:#0d47a1}
+.bgy{background:var(--g50);color:var(--txt2);border:1px solid var(--border)}.bgy:hover{background:var(--g100)}
+.bgold{background:var(--gold);color:var(--g900)}.bgold:hover{background:var(--gold-dark);color:#fff}
+.br2b{background:var(--red);color:#fff}
+.bsm{padding:6px 12px;font-size:12px}
+.bout{background:transparent;border:1.5px solid var(--g500);color:var(--g700)}.bout:hover{background:var(--g50)}
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:5px}
+.fi{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);color:var(--txt);background:var(--bg);transition:var(--tr);outline:none}
+.fi:focus{border-color:var(--g500);background:#fff;box-shadow:0 0 0 3px rgba(45,164,78,.08)}
+select.fi{cursor:pointer}
+textarea.fi{resize:vertical;min-height:60px}
+input[type=color].fi{height:34px;padding:3px 6px;cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--g600)}
+.fi-mono{font-family:monospace;font-size:12px;word-break:break-all}
+.uz{border:2px dashed var(--g300);border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;background:var(--g50);display:block;transition:var(--tr);margin-bottom:10px}
+.uz:hover{background:var(--g100);border-color:var(--g500)}
+.uz input{display:none}
+.uz-i{font-size:26px;margin-bottom:5px}
+.uz-l{font-weight:700;color:var(--g700);font-size:13px}
+.uz-s{color:var(--txt3);font-size:11px;margin-top:2px}
+.uz.blue{border-color:#90caf9;background:#e3f2fd}.uz.blue .uz-l{color:var(--blue)}
+.uz.gold{border-color:var(--gold);background:#fffde7}.uz.gold .uz-l{color:var(--gold-dark)}
+.twrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:540px}
+.tbl thead{background:var(--g50)}
+.tbl th{padding:9px 11px;text-align:left;font-weight:700;font-size:11px;color:var(--g800);border-bottom:1.5px solid var(--border);white-space:nowrap;letter-spacing:.3px;text-transform:uppercase}
+.tbl td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--txt);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--g50)}
+.tph{width:30px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border);display:block}
+.tnph{width:30px;height:38px;background:var(--g50);border-radius:4px;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.bg2{background:var(--g100);color:var(--g800)}
+.ibox{background:#fffde7;border-radius:8px;padding:11px 13px;border-left:3px solid var(--gold);font-size:12px;color:var(--txt2);line-height:1.7;margin-bottom:12px}
+.ibox-t{font-weight:700;color:var(--gold-dark);margin-bottom:3px;font-size:13px}
+.ibox.info{background:#e3f2fd;border-color:#42a5f5}.ibox.info .ibox-t{color:var(--blue)}
+.ibox.ok{background:var(--g100);border-color:var(--g500)}.ibox.ok .ibox-t{color:var(--g700)}
+.ibox.err{background:#ffebee;border-color:var(--red)}.ibox.err .ibox-t{color:var(--red)}
+#editor{position:relative;overflow:hidden;border-radius:var(--rl);box-shadow:var(--shadow-lg);user-select:none;flex-shrink:0;border:2px solid var(--border)}
+.chip{position:absolute;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;color:#fff;cursor:grab;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:10;transform:translateY(-110%);user-select:none;border:1.5px solid rgba(255,255,255,.3)}
+.chip.on{border-color:white;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
+.ebox{position:absolute;box-sizing:border-box;border:2px dashed;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.rh{position:absolute;width:11px;height:11px;background:var(--blue);border:2px solid #fff;border-radius:3px;z-index:30;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.pcard{position:relative;overflow:hidden;border-radius:10px;box-shadow:var(--shadow-lg);user-select:none;display:inline-block;flex-shrink:0}
+.pcard .pbg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.pcard .ptxt{position:absolute;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;line-height:1}
+#overlay{position:fixed;inset:0;background:rgba(13,77,37,.72);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:14px;backdrop-filter:blur(4px)}
+#overlay.on{display:flex}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#tw{position:fixed;bottom:22px;right:22px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#0d4d25;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:ti .3s ease;border-left:3px solid var(--gold)}
+@keyframes ti{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.f1{flex:1}.f240{flex:0 0 240px}.f300{flex:0 0 300px}
+.stabs{display:flex;gap:5px;margin-bottom:14px}
+.stab{padding:7px 14px;border-radius:7px;font-size:12px;cursor:pointer;border:1.5px solid var(--border);color:var(--txt2);font-weight:500;font-family:var(--font);transition:var(--tr);background:transparent}
+.stab.on{background:var(--g700);color:#fff;border-color:var(--g700)}
+.f-chip{padding:7px 10px;margin-bottom:3px;border-radius:8px;cursor:pointer;font-size:12px;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;gap:7px;transition:var(--tr);font-weight:500}
+.f-chip:hover{border-color:var(--g400);background:var(--g50)}
+.f-chip.on{background:var(--g50);border-color:var(--g500);color:var(--g800)}
+.fdot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.slbl{font-size:10px;font-weight:700;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;padding:8px 0 4px;display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nodata{text-align:center;padding:32px;color:var(--txt3);font-size:13px}
+.sbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sbar input{flex:1;min-width:150px;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;transition:var(--tr)}
+.sbar input:focus{border-color:var(--g500)}
+.sep{height:1px;background:var(--border);margin:12px 0}
+.page{display:none;animation:fu .2s ease}
+.page.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.sql-box{background:#1a2b1a;color:#82d49a;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:11px;line-height:1.8;margin-top:8px;overflow-x:auto;white-space:pre}
+</style>
+</head>
+<body>
+
+<div id="login-page">
+<div class="lcard">
+  <div class="lbrand">
+    <div class="lemblem"><img id="l-logo" src="" alt=""><span class="lem-em" id="l-em">🎓</span></div>
+    <div class="linst" id="l-inst">KEMENTERIAN AGAMA REPUBLIK INDONESIA</div>
+    <div class="lschool" id="l-school">Madrasah Aliyah Negeri 3 Hulu Sungai Selatan</div>
+    <div class="ltitle">Kartu Pelajar</div>
+    <div class="lsub">Sistem Pembuatan Kartu Pelajar Digital</div>
+  </div>
+  <div class="ldiv"></div>
+  <div id="lerr" class="lerr">Username atau password salah.</div>
+  <label class="llbl">Username</label>
+  <input class="linput" id="lu" placeholder="Username" onkeydown="if(event.key==='Enter')doLogin()">
+  <label class="llbl">Password</label>
+  <div class="lpwrap">
+    <input class="linput" id="lp" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="leye" onclick="togglePass()" type="button">👁</button>
+  </div>
+  <button class="lbtn" onclick="doLogin()">Masuk ke Sistem →</button>
+</div>
+</div>
+
+<div id="app">
+<div class="alayout">
+<aside class="sb">
+  <div class="sbh">
+    <div class="sblogo">
+      <div class="sbem"><img id="sb-logo" src="" alt=""><span id="sb-em">🎓</span></div>
+      <div class="sbsc"><span id="sb-abbr">MAN 3 HSS</span><span>Kartu Pelajar v2.0</span></div>
+    </div>
+  </div>
+  <nav class="sbnav">
+    <span class="sbsec">Alur Kerja</span>
+    <div class="sbi on" onclick="goPage(0)"><span class="sbi-i">🖼️</span><span>Template Kartu</span></div>
+    <div class="sbi" onclick="goPage(1)"><span class="sbi-i">📐</span><span>Atur Posisi</span></div>
+    <div class="sbi" onclick="goPage(2)"><span class="sbi-i">👥</span><span>Data Siswa</span><span class="sbbadge" id="sbcnt">0</span></div>
+    <div class="sbi" onclick="goPage(3)"><span class="sbi-i">📥</span><span>Unduh Kartu</span></div>
+    <span class="sbsec" style="margin-top:8px">Sistem</span>
+    <div class="sbi" onclick="goPage(4)"><span class="sbi-i">⚙️</span><span>Pengaturan</span></div>
+  </nav>
+  <div class="sbfooter">
+    <div class="sbuser"><div class="sbav">👤</div><div><div class="sbun" id="sbun">Admin</div><div class="sbur">Operator</div></div></div>
+    <div class="sbout" onclick="doLogout()"><span>🚪</span><span>Keluar</span></div>
+  </div>
+</aside>
+
+<div class="main">
+<div class="topbar">
+  <div><div class="tb-title" id="tbt">Template Kartu</div></div>
+  <button id="dbbadge" class="db-badge" onclick="goPage(4)" title="Klik untuk pengaturan database" style="background:#ffebee;color:var(--red)">🔴 Mode Lokal</button>
+  <div class="step-dots"><div class="sdot act"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div></div>
+  <div class="tb-sub" id="tbs">Langkah 1 dari 4</div>
+</div>
+<div class="content">
+
+<div class="page on" id="p0">
+  <h2>Upload Template Kartu</h2>
+  <p class="pdesc">Upload gambar background kartu depan dan belakang tanpa data siswa.</p>
+  <div class="row">
+    <div class="f300">
+      <div class="card">
+        <div class="ctitle">🖼️ Kartu Depan</div>
+        <label class="uz"><input type="file" accept="image/*" onchange="loadTmpl('front',this)">
+          <div class="uz-i">📄</div><div class="uz-l" id="lbl-f">Klik upload template depan</div>
+          <div class="uz-s">JPG / PNG</div></label>
+        <div class="ctitle" style="margin-top:12px">🔄 Kartu Belakang</div>
+        <label class="uz blue"><input type="file" accept="image/*" onchange="loadTmpl('back',this)">
+          <div class="uz-i">🔵</div><div class="uz-l" id="lbl-b">Klik upload template belakang</div>
+          <div class="uz-s">Sama untuk semua siswa</div></label>
+      </div>
+      <button class="btn bg bl" style="font-size:14px;padding:12px" onclick="goPage(1)">Lanjut ke Atur Posisi →</button>
+    </div>
+    <div class="f1">
+      <div class="card">
+        <div class="ctitle">👁️ Preview Template</div>
+        <div class="g2">
+          <div><div class="slbl">DEPAN</div><div id="pvf" style="aspect-ratio:85.6/54;background:var(--g50);border-radius:8px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:12px;overflow:hidden">Belum ada</div></div>
+          <div><div class="slbl">BELAKANG</div><div id="pvb" style="aspect-ratio:85.6/54;background:#e3f2fd;border-radius:8px;border:2px dashed #90caf9;display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:12px;overflow:hidden">Belum ada</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p1">
+  <h2>Editor Posisi Elemen</h2>
+  <p class="pdesc">Drag chip berwarna untuk memindahkan elemen. Klik chip untuk edit properti. Tanda Tangan dapat di-resize dengan sudut biru.</p>
+  <div class="row">
+    <div class="f240">
+      <div class="card" style="padding:14px">
+        <span class="slbl">Data Siswa</span><div id="fls"></div>
+        <div class="sep"></div>
+        <span class="slbl">Info Sekolah</span><div id="flk"></div>
+      </div>
+      <div id="pbox" style="display:none" class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--g800);margin-bottom:10px">⚙️ <span id="ptit"></span></div>
+        <div id="rfs"><label class="fl">Font Size (px)</label><input type="number" class="fi" id="pfs" min="6" max="80" oninput="updProp('fs',+this.value)" style="margin-bottom:10px"></div>
+        <div id="rcol"><label class="fl">Warna</label><input type="color" class="fi" id="pcol" oninput="updProp('col',this.value)" style="margin-bottom:10px"></div>
+        <div id="rbold"><label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--txt2);cursor:pointer;margin-bottom:10px"><input type="checkbox" id="pbold" onchange="updProp('bold',this.checked)" style="accent-color:var(--g600)"> Tebal (Bold)</label></div>
+        <div id="rsz" style="display:none"><div class="g2"><div><label class="fl">Lebar (%)</label><input type="number" class="fi" id="pw" min="1" max="99" step="0.5" oninput="updProp('w',+this.value)"></div><div><label class="fl">Tinggi (%)</label><input type="number" class="fi" id="ph" min="1" max="99" step="0.5" oninput="updProp('h',+this.value)"></div></div></div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:4px;font-family:monospace" id="ppos"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <button id="btnlock" class="btn bgold" onclick="toggleLock()">🔒 Kunci Layout</button>
+        <div id="lockbadge" style="display:none;font-size:12px;color:var(--g700);background:var(--g100);padding:8px 12px;border-radius:8px;text-align:center;border:1px solid var(--g300)">✅ Layout terkunci</div>
+        <button class="btn bg" onclick="goPage(2)">Lanjut →</button>
+        <button class="btn bgy" onclick="goPage(0)">← Kembali</button>
+      </div>
+    </div>
+    <div class="f1">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span class="badge bg2" id="ebadge" style="font-size:12px;padding:5px 12px">✏️ Mode Edit</span>
+        <span style="font-size:12px;color:var(--txt3)" id="ehint">💡 Drag chip untuk memindahkan. Klik untuk edit properti.</span>
+      </div>
+      <div id="editor">
+        <div id="edbg" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:13px;background:var(--g50)">Upload template di Tab 1</div>
+        <img id="edimg" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none" draggable="false">
+        <div id="chips"></div>
+      </div>
+      <p style="color:var(--txt3);font-size:12px;margin-top:8px">🟢 Data siswa &nbsp;|&nbsp; 🔵 Info sekolah &nbsp;|&nbsp; ◇ sudut = resize</p>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p2">
+  <h2>Data Siswa</h2>
+  <p class="pdesc">Tambah satu per satu atau import dari Excel. Foto dikompres otomatis.</p>
+  <div class="row">
+    <div class="f300">
+      <div class="card">
+        <div class="stabs">
+          <button class="stab on" id="ms" onclick="setMode('single')">👤 Satu Siswa</button>
+          <button class="stab" id="me" onclick="setMode('excel')">📊 Import Excel</button>
+        </div>
+        <div id="ds">
+          <label class="uz gold" style="display:flex;align-items:center;gap:12px;text-align:left;padding:11px">
+            <input type="file" accept="image/*" onchange="pickPhoto(this)">
+            <div id="pht"><div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div></div>
+            <div><div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div><div style="color:var(--txt3);font-size:11px">Dikompres otomatis</div></div>
+          </label>
+          <div class="fg"><label class="fl">Nama Lengkap *</label><input class="fi" id="fn" placeholder="ANZILIE RAHMA"></div>
+          <div class="fg"><label class="fl">NIS/NISN *</label><input class="fi" id="fnis" placeholder="3083045603"></div>
+          <div class="g2">
+            <div class="fg"><label class="fl">Jenis Kelamin</label><select class="fi" id="fjk"><option>Laki-laki</option><option>Perempuan</option></select></div>
+            <div class="fg"><label class="fl">Gol. Darah</label><select class="fi" id="fgol"><option>A</option><option>B</option><option>AB</option><option>O</option><option>Tidak Diketahui</option></select></div>
+          </div>
+          <div class="fg"><label class="fl">Tempat, Tanggal Lahir</label><input class="fi" id="fttl" placeholder="HSS, 10-08-2008"></div>
+          <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="fal" placeholder="Jl. ..." rows="2"></textarea></div>
+          <div class="fg"><label class="fl">No. HP/WA Orang Tua</label><input class="fi" id="fhp" placeholder="08xxxxxxxxxx"></div>
+          <div class="fg"><label class="fl">Berlaku Sampai</label><input class="fi" id="fbrl" placeholder="31 JULI 2026"></div>
+          <input type="hidden" id="fid">
+          <div style="display:flex;gap:8px">
+            <button class="btn bgy f1" onclick="resetForm()">Reset</button>
+            <button class="btn bg f1" id="btnsave" onclick="saveSiswa()">+ Simpan</button>
+          </div>
+        </div>
+        <div id="de" style="display:none">
+          <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
+            <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
+            <div class="uz-s">.xlsx / .xls / .csv</div></label>
+          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Jenis Kelamin | TTL | Alamat | Golongan Darah | No HP | Berlaku Sampai</div>
+          <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
+        </div>
+      </div>
+    </div>
+    <div class="f1">
+      <div class="sbar">
+        <input placeholder="🔍 Cari nama / NIS..." oninput="renderList()" id="cari">
+        <span class="badge bg2" id="jml">0 siswa</span>
+        <button class="btn bg bsm" onclick="goPage(3)">Ke Unduh →</button>
+      </div>
+      <div class="twrap">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Foto</th><th>Nama</th><th>NIS/NISN</th><th>J.K</th><th>✓</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="nodata" class="nodata"><div style="font-size:40px;margin-bottom:10px">📋</div>Belum ada data siswa.</div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p3">
+  <h2>Unduh Kartu Pelajar</h2>
+  <p class="pdesc">Download PNG resolusi tinggi atau PDF siap cetak. Ukuran 85.6×54 mm, 300 DPI.</p>
+  <div class="row">
+    <div class="f300">
+      <div class="card">
+        <div class="ctitle">📦 Semua Siswa</div>
+        <button class="btn bb bl" onclick="dlAllPDF('front')">📄 PDF Depan — semua</button>
+        <button class="btn bb bl" onclick="dlAllPDF('back')">📄 PDF Belakang — semua</button>
+        <button class="btn bg bl" onclick="dlAllPNG('front')">🖼 PNG Depan — semua (ZIP)</button>
+        <button class="btn bg bl" onclick="dlAllPNG('back')">🖼 PNG Belakang — semua (ZIP)</button>
+      </div>
+      <div class="card">
+        <div class="ctitle">👤 Satu Siswa</div>
+        <div class="fg"><label class="fl">Pilih Siswa</label>
+          <select class="fi" id="sels" onchange="refreshDL()"><option value="">— Pilih —</option></select></div>
+        <div class="g2">
+          <button class="btn bb bsm" onclick="dlOnePDF('front')">📄 PDF Depan</button>
+          <button class="btn bb bsm" onclick="dlOnePDF('back')">📄 PDF Belakang</button>
+          <button class="btn bg bsm" onclick="dlOnePNG('front')">🖼 PNG Depan</button>
+          <button class="btn bg bsm" onclick="dlOnePNG('back')">🖼 PNG Belakang</button>
+        </div>
+      </div>
+    </div>
+    <div class="f1">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600">Preview:</span>
+        <button class="btn bg bsm" id="pbf" onclick="setPrevSide('front')">Depan</button>
+        <button class="btn bgy bsm" id="pbb" onclick="setPrevSide('back')">Belakang</button>
+      </div>
+      <div id="dlprev"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p4">
+  <h2>Pengaturan Sistem</h2>
+  <p class="pdesc">Hubungkan database, kelola identitas sekolah, kepala, dan akun login.</p>
+  <div class="row">
+    <div class="f300">
+
+      <!-- SUPABASE CONNECTION -->
+      <div class="card" style="border:2px solid var(--g300)">
+        <div class="ctitle">🗄️ Koneksi Database Supabase</div>
+        <div id="db-info" class="ibox err" style="margin-bottom:12px">
+          <div class="ibox-t" id="db-status-title">🔴 Belum Terhubung</div>
+          <span id="db-status-desc">Data tersimpan sementara di browser. Hubungkan ke Supabase agar data permanen.</span>
+        </div>
+        <div class="fg">
+          <label class="fl">Supabase Project URL</label>
+          <input class="fi fi-mono" id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co">
+        </div>
+        <div class="fg">
+          <label class="fl">Supabase Anon Key</label>
+          <textarea class="fi fi-mono" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." rows="3"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn bg f1" onclick="connectDB()">🔗 Hubungkan</button>
+          <button class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2" onclick="disconnectDB()">Putuskan</button>
+        </div>
+        <details style="cursor:pointer">
+          <summary style="font-size:12px;font-weight:600;color:var(--txt2);padding:6px 0">📋 SQL Setup Tabel (klik untuk lihat)</summary>
+          <div class="sql-box">-- Jalankan di Supabase SQL Editor
+create table if not exists siswa (
+  id uuid default gen_random_uuid() primary key,
+  nama text not null,
+  nis_nisn text,
+  jenis_kelamin text,
+  ttl text,
+  alamat text,
+  gol_darah text,
+  no_hp text,
+  berlaku_sampai text,
+  photo_url text,
+  created_at timestamptz default now()
+);
+
+create table if not exists app_settings (
+  id int8 primary key default 1,
+  data jsonb default '{}',
+  updated_at timestamptz default now()
+);</div>
+          <button class="btn bg bsm" style="margin-top:8px" onclick="copySql()">📋 Copy SQL</button>
+          <div class="ibox info" style="margin-top:8px">
+            <div class="ibox-t">Cara setup Storage (foto)</div>
+            Supabase → Storage → New Bucket → Nama: <b>foto-siswa</b> → Public: ✅ On
+          </div>
+        </details>
+        <div class="ibox" style="margin-top:10px">
+          <div class="ibox-t">📍 Cara dapat URL & Key</div>
+          Login supabase.com → Project → Settings → API<br>
+          Copy <b>Project URL</b> dan <b>anon public key</b>
+        </div>
+      </div>
+
+      <!-- IDENTITAS SEKOLAH -->
+      <div class="card">
+        <div class="ctitle">🏛️ Identitas Sekolah</div>
+        <div class="fg">
+          <label class="fl">Logo Sekolah</label>
+          <label class="uz" style="padding:12px;display:flex;align-items:center;gap:12px;text-align:left">
+            <input type="file" accept="image/*" onchange="loadLogo(this)">
+            <div id="logo-tw"><div style="width:50px;height:50px;background:var(--g50);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid var(--border)">🎓</div></div>
+            <div><div id="logo-lbl" style="font-weight:700;color:var(--g700);font-size:13px">Klik upload logo</div><div style="color:var(--txt3);font-size:11px">PNG transparan, maks 200×200px</div></div>
+          </label>
+        </div>
+        <div class="fg"><label class="fl">Nama Instansi (baris 1 login)</label><input class="fi" id="s-inst" placeholder="KEMENTERIAN AGAMA REPUBLIK INDONESIA" oninput="applySchoolInfo()"></div>
+        <div class="fg"><label class="fl">Nama Sekolah Lengkap</label><input class="fi" id="s-school" placeholder="Madrasah Aliyah Negeri 3 Hulu Sungai Selatan" oninput="applySchoolInfo()"></div>
+        <div class="fg"><label class="fl">Singkatan Sekolah</label><input class="fi" id="s-abbr" placeholder="MAN 3 HSS" oninput="applySchoolInfo()"></div>
+      </div>
+
+      <!-- KEPALA -->
+      <div class="card">
+        <div class="ctitle">🏫 Info Kepala Sekolah</div>
+        <div class="fg"><label class="fl">Nama Kepala</label><input class="fi" id="sn" placeholder="MUHAMMAD TAUFIK" oninput="updSPrev()"></div>
+        <div class="fg"><label class="fl">NIP</label><input class="fi" id="snip" placeholder="NIP. 197xxxxxx" oninput="updSPrev()"></div>
+        <div class="fg"><label class="fl">Jabatan</label><input class="fi" id="slbl" placeholder="Kepala Madrasah" oninput="updSPrev()"></div>
+        <div class="fg"><label class="fl">Kota Cetak</label><input class="fi" id="skota" placeholder="Hulu Sungai Selatan" oninput="updSPrev()"></div>
+      </div>
+
+      <!-- TTD -->
+      <div class="card">
+        <div class="ctitle">✍️ Tanda Tangan</div>
+        <label class="uz gold" style="padding:11px"><input type="file" accept="image/*" onchange="loadTTD(this)">
+          <div class="uz-i" style="font-size:22px">✍️</div>
+          <div class="uz-l" id="ttdlbl">Klik upload tanda tangan</div>
+          <div class="uz-s">PNG transparan direkomendasikan</div></label>
+        <div id="ttdpw" style="display:none;text-align:center">
+          <img id="ttdpi" style="max-height:60px;max-width:100%;border-radius:6px;border:1px solid var(--border)">
+        </div>
+      </div>
+
+      <!-- KOMPRESI -->
+      <div class="card">
+        <div class="ctitle">🗜️ Kompresi Foto</div>
+        <div class="fg"><label class="fl">Kualitas — <span id="qlbl">80</span>%</label><input type="range" min="40" max="100" value="80" id="sq" oninput="document.getElementById('qlbl').textContent=this.value"></div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Maks. Lebar (px)</label><input type="number" class="fi" id="smw" value="400"></div>
+          <div class="fg"><label class="fl">Maks. Tinggi (px)</label><input type="number" class="fi" id="smh" value="500"></div>
+        </div>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="card">
+        <div class="ctitle">🔐 Ubah Login</div>
+        <div class="fg"><label class="fl">Username Baru</label><input class="fi" id="su" placeholder="Kosongkan jika tidak diubah"></div>
+        <div class="fg"><label class="fl">Password Baru</label><input class="fi" type="password" id="sp" placeholder="••••••••"></div>
+        <div class="fg"><label class="fl">Konfirmasi</label><input class="fi" type="password" id="sp2" placeholder="••••••••"></div>
+      </div>
+
+      <button class="btn bg bl" style="font-size:14px;padding:12px" onclick="saveSettings()">💾 Simpan Semua</button>
+    </div>
+
+    <div class="f1">
+      <div class="card">
+        <div class="ctitle">👁️ Preview Login & Kepala</div>
+        <div style="background:var(--sb-grad);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+          <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;border:2px solid rgba(255,255,255,.25);overflow:hidden">
+            <img id="pv-logo" src="" style="display:none;width:100%;height:100%;object-fit:contain">
+            <span id="pv-logo-em" style="font-size:22px">🎓</span>
+          </div>
+          <div id="pv-inst" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.95);margin-bottom:3px">KEMENTERIAN AGAMA REPUBLIK INDONESIA</div>
+          <div id="pv-school" style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:6px">Madrasah Aliyah Negeri 3 Hulu Sungai Selatan</div>
+          <div style="font-size:14px;font-weight:800;color:#fff">Kartu Pelajar</div>
+        </div>
+        <div style="background:var(--g50);border-radius:8px;padding:14px;text-align:right">
+          <div id="pvtgl" style="font-size:13px;color:var(--txt2);margin-bottom:3px"></div>
+          <div id="pvkep" style="font-size:13px;color:var(--txt2);margin-bottom:8px"></div>
+          <div id="pvttd" style="width:90px;height:34px;background:var(--card);border:1.5px dashed var(--border);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:var(--txt3);margin-bottom:6px">ttd preview</div>
+          <div id="pvnama" style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:2px"></div>
+          <div id="pvnip" style="font-size:12px;color:var(--txt2)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></div></div></div>
+
+<canvas id="cv" style="display:none"></canvas>
+<div id="qrw" style="position:fixed;left:-9999px;top:0;visibility:hidden;width:128px;height:128px"></div>
+<div id="overlay"><div class="spinner"></div><div id="ovmsg" style="font-size:16px;font-weight:700"></div><div id="ovd" style="font-size:13px;opacity:.7"></div></div>
+<div id="tw"></div>
+
+<script>
+const CW=1011,CH=638,DW=740,DH=Math.round(740*CH/CW);
+const PTITLES=['Template Kartu','Editor Posisi','Data Siswa','Unduh Kartu','Pengaturan'];
+const PSUBS=['Langkah 1 dari 4','Langkah 2 dari 4','Langkah 3 dari 4','Langkah 4 dari 4','Pengaturan Sistem'];
+const FIELDS=[
+  {id:'photo',        label:'Foto Siswa',     type:'img', grp:'siswa', clr:'#1565c0'},
+  {id:'nama',         label:'Nama',           type:'text',grp:'siswa', clr:'#1a7a3d',pre:''},
+  {id:'nisNisn',      label:'NIS/NISN',       type:'text',grp:'siswa', clr:'#e65100',pre:'NIS/NISN      : '},
+  {id:'jenisKelamin', label:'Jenis Kelamin',  type:'text',grp:'siswa', clr:'#6a1b9a',pre:'Jenis Kelamin : '},
+  {id:'ttl',          label:'T.T.L',          type:'text',grp:'siswa', clr:'#b71c1c',pre:'T.T.L             : '},
+  {id:'alamat',       label:'Alamat',         type:'text',grp:'siswa', clr:'#4e342e',pre:'Alamat          : '},
+  {id:'golDarah',     label:'Gol. Darah',     type:'text',grp:'siswa', clr:'#880e4f',pre:'Gol. Darah    : '},
+  {id:'noHp',         label:'No. HP/WA',      type:'text',grp:'siswa', clr:'#37474f',pre:'No. HP/WA    : '},
+  {id:'berlakuSampai',label:'Berlaku Sampai', type:'exp', grp:'siswa', clr:'#0d4d25'},
+  {id:'qrCode',       label:'QR Code',        type:'img', grp:'siswa', clr:'#212121'},
+  {id:'tglCetak',     label:'Tgl. Cetak',     type:'text',grp:'sekolah',clr:'#01579b'},
+  {id:'labelKepala',  label:'Label Kepala',   type:'text',grp:'sekolah',clr:'#01579b'},
+  {id:'ttdImg',       label:'Tanda Tangan',   type:'img', grp:'sekolah',clr:'#01579b'},
+  {id:'namaKepala',   label:'Nama Kepala',    type:'text',grp:'sekolah',clr:'#01579b'},
+  {id:'nip',          label:'NIP',            type:'text',grp:'sekolah',clr:'#01579b'},
+];
+const IL={
+  photo:{x:3.5,y:22,w:22,h:55},nama:{x:29,y:27,fs:22,bold:true,col:'#1a5c2a'},
+  nisNisn:{x:29,y:38,fs:13,bold:false,col:'#333'},jenisKelamin:{x:29,y:47,fs:13,bold:false,col:'#333'},
+  ttl:{x:29,y:56,fs:11,bold:false,col:'#333'},alamat:{x:29,y:65,fs:10,bold:false,col:'#333'},
+  golDarah:{x:29,y:74,fs:12,bold:false,col:'#333'},noHp:{x:29,y:83,fs:11,bold:false,col:'#333'},
+  berlakuSampai:{x:3,y:88,fs:11,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
+  tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
+  ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
+};
+
+let CREDS=JSON.parse(localStorage.getItem('kp_creds')||'{"user":"admin","pass":"man3hss"}');
+let SB=null; // Supabase client
+
+const S={
+  tmplFront:null,tmplBack:null,ttdImg:null,
+  layout:JSON.parse(JSON.stringify(IL)),
+  locked:false,sel:null,drag:null,resize:null,
+  students:[],curPhoto:null,prevSide:'front',
+  settings:{
+    namaKepala:'MUHAMMAD TAUFIK',nip:'NIP. 197xxxxxx',
+    labelKepala:'Kepala Madrasah',kota:'Hulu Sungai Selatan',
+    quality:.8,maxW:400,maxH:500,
+    logoSekolah:null,
+    namaInstansi:'KEMENTERIAN AGAMA REPUBLIK INDONESIA',
+    namaSekolah:'Madrasah Aliyah Negeri 3 Hulu Sungai Selatan',
+    singkatan:'MAN 3 HSS',
+  }
+};
+
+// ═══ SUPABASE ═══
+function initSB(){
+  const url=localStorage.getItem('sb_url');
+  const key=localStorage.getItem('sb_key');
+  if(url&&key){
+    try{SB=supabase.createClient(url,key);return true;}catch(e){SB=null;}
+  }
+  return false;
+}
+
+async function connectDB(){
+  const url=gv('sb-url').trim();
+  const key=gv('sb-key').trim();
+  if(!url||!key){toast('Isi URL dan Key terlebih dahulu!','err');return;}
+  showOv('Menghubungkan ke database...');
+  try{
+    SB=supabase.createClient(url,key);
+    const{error}=await SB.from('siswa').select('id',{count:'exact',head:true});
+    if(error)throw new Error(error.message);
+    localStorage.setItem('sb_url',url);
+    localStorage.setItem('sb_key',key);
+    updDBStatus(true);
+    await loadFromDB();
+    hideOv();
+    toast('✅ Berhasil terhubung ke database Supabase!');
+  }catch(e){
+    SB=null;hideOv();
+    toast('Gagal terhubung: '+e.message,'err');
+    updDBStatus(false);
+  }
+}
+
+function disconnectDB(){
+  SB=null;
+  localStorage.removeItem('sb_url');localStorage.removeItem('sb_key');
+  document.getElementById('sb-url').value='';
+  document.getElementById('sb-key').value='';
+  updDBStatus(false);
+  toast('Koneksi database diputus','warn');
+}
+
+function updDBStatus(ok){
+  const b=document.getElementById('dbbadge');
+  const inf=document.getElementById('db-info');
+  const tit=document.getElementById('db-status-title');
+  const desc=document.getElementById('db-status-desc');
+  if(ok){
+    b.textContent='🟢 Database';b.style.background='var(--g100)';b.style.color='var(--g700)';
+    inf.className='ibox ok';tit.textContent='🟢 Terhubung ke Supabase';
+    desc.textContent='Data tersimpan permanen di cloud. Bisa diakses dari perangkat manapun.';
+  }else{
+    b.textContent='🔴 Mode Lokal';b.style.background='#ffebee';b.style.color='var(--red)';
+    inf.className='ibox err';tit.textContent='🔴 Belum Terhubung';
+    desc.textContent='Data tersimpan sementara di browser. Hubungkan Supabase agar permanen.';
+  }
+}
+
+async function loadFromDB(){
+  if(!SB)return;
+  try{
+    const{data,error}=await SB.from('siswa').select('*').order('nama');
+    if(error)throw error;
+    S.students=data.map(r=>({
+      id:r.id,nama:r.nama,nisNisn:r.nis_nisn||'',jenisKelamin:r.jenis_kelamin||'Laki-laki',
+      ttl:r.ttl||'',alamat:r.alamat||'',golDarah:r.gol_darah||'A',
+      noHp:r.no_hp||'',berlakuSampai:r.berlaku_sampai||'',photo:r.photo_url,
+    }));
+    document.getElementById('sbcnt').textContent=S.students.length;
+    renderList();fillSel();
+  }catch(e){toast('Gagal memuat data: '+e.message,'err');}
+}
+
+async function uploadFotoSB(base64,nama){
+  if(!SB||!base64)return null;
+  try{
+    const blob=await fetch(base64).then(r=>r.blob());
+    const fn=`${Date.now()}-${nama.replace(/\s+/g,'-').toLowerCase()}.jpg`;
+    const{error}=await SB.storage.from('foto-siswa').upload(fn,blob,{contentType:'image/jpeg',upsert:true});
+    if(error)return null;
+    const{data}=SB.storage.from('foto-siswa').getPublicUrl(fn);
+    return data.publicUrl;
+  }catch(e){return null;}
+}
+
+// ═══ LOGIN ═══
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  if(u===CREDS.user&&p===CREDS.pass){
+    sessionStorage.setItem('kp_ok','1');
+    document.getElementById('login-page').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('sbun').textContent=u;
+    initSB();syncSUI();initEditor();renderChips();
+    if(SB){updDBStatus(true);loadFromDB();}
+  }else{
+    const e=document.getElementById('lerr');e.style.display='block';
+    document.getElementById('lp').value='';
+    setTimeout(()=>e.style.display='none',3000);
+  }
+}
+function doLogout(){sessionStorage.removeItem('kp_ok');document.getElementById('app').style.display='none';document.getElementById('login-page').style.display='flex';document.getElementById('lp').value='';}
+function togglePass(){const i=document.getElementById('lp');i.type=i.type==='password'?'text':'password';}
+if(sessionStorage.getItem('kp_ok')){
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  setTimeout(()=>{
+    initSB();syncSUI();initEditor();renderChips();
+    if(SB){updDBStatus(true);loadFromDB();}
+  },100);
+}
+
+// ═══ NAV ═══
+function goPage(n){
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('on',i===n));
+  document.querySelectorAll('.sbi').forEach((b,i)=>b.classList.toggle('on',i===n));
+  document.getElementById('tbt').textContent=PTITLES[n]||'';
+  document.getElementById('tbs').textContent=PSUBS[n]||'';
+  const dots=document.querySelectorAll('.sdot');dots.forEach((d,i)=>{d.className='sdot';if(i<n)d.classList.add('done');if(i===n)d.classList.add('act');});
+  if(n===1){initEditor();renderChips();}
+  if(n===2)renderList();
+  if(n===3){fillSel();refreshDL();}
+  if(n===4)syncSUI();
+}
+
+// ═══ UTILS ═══
+const uid=()=>Date.now()+Math.random().toString(36).slice(2);
+const gv=id=>(document.getElementById(id)||{}).value||'';
+const readF=f=>new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(f);});
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+function fmtDate(){const d=new Date();const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return`${S.settings.kota}, ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;}
+function toast(msg,type='ok'){
+  const t=document.createElement('div');t.className='toast';
+  t.style.borderLeftColor=type==='err'?'#ef5350':type==='warn'?'#ff9800':'var(--gold)';
+  t.textContent=msg;document.getElementById('tw').appendChild(t);
+  setTimeout(()=>{t.style.cssText+='opacity:0;transform:translateX(120%);transition:all .3s';setTimeout(()=>t.remove(),300);},2800);
+}
+async function compress(file){
+  const src=await readF(file);
+  return new Promise(r=>{
+    const img=new Image();img.onload=()=>{
+      let w=img.width,h=img.height;const mw=S.settings.maxW,mh=S.settings.maxH;
+      if(w>mw){h=h*mw/w;w=mw;}if(h>mh){w=w*mh/h;h=mh;}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);
+      r(cv.toDataURL('image/jpeg',S.settings.quality));
+    };img.src=src;
+  });
+}
+function showOv(m){document.getElementById('ovmsg').textContent=m;document.getElementById('ovd').textContent='';document.getElementById('overlay').classList.add('on');}
+function updOv(d){document.getElementById('ovd').textContent=d;}
+function hideOv(){document.getElementById('overlay').classList.remove('on');}
+function copySql(){
+  const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());`;
+  navigator.clipboard.writeText(sql).then(()=>toast('SQL berhasil dicopy ✅')).catch(()=>toast('Gagal copy','err'));
+}
+
+// ═══ TEMPLATE ═══
+async function loadTmpl(side,inp){
+  const f=inp.files[0];if(!f)return;const src=await readF(f);
+  if(side==='front'){S.tmplFront=src;document.getElementById('lbl-f').textContent='✅ Depan terupload';document.getElementById('pvf').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;document.getElementById('edimg').src=src;document.getElementById('edimg').style.display='block';document.getElementById('edbg').style.display='none';toast('Template depan diupload ✅');}
+  else{S.tmplBack=src;document.getElementById('lbl-b').textContent='✅ Belakang terupload';document.getElementById('pvb').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;toast('Template belakang diupload ✅');}
+}
+
+// ═══ EDITOR ═══
+function initEditor(){const ed=document.getElementById('editor');ed.style.width=DW+'px';ed.style.height=DH+'px';}
+function buildLists(){
+  ['siswa','sekolah'].forEach(grp=>{
+    const el=document.getElementById('fl'+(grp==='siswa'?'s':'k'));el.innerHTML='';
+    FIELDS.filter(f=>f.grp===grp).forEach(f=>{
+      const d=document.createElement('div');d.className='f-chip'+(S.sel===f.id?' on':'');
+      d.innerHTML=`<span class="fdot" style="background:${f.clr}"></span>${f.label}`;
+      d.onclick=()=>selField(f.id);el.appendChild(d);
+    });
+  });
+}
+function selField(id){
+  S.sel=id;buildLists();const L=S.layout[id],f=FIELDS.find(x=>x.id===id);
+  const pb=document.getElementById('pbox');if(!L){pb.style.display='none';return;}
+  pb.style.display='block';document.getElementById('ptit').textContent=f.label;
+  const hasT=L.fs!==undefined,hasS=L.w!==undefined;
+  document.getElementById('rfs').style.display=hasT?'block':'none';document.getElementById('rcol').style.display=hasT?'block':'none';
+  document.getElementById('rbold').style.display=hasT?'block':'none';document.getElementById('rsz').style.display=hasS?'block':'none';
+  if(hasT){const pf=document.getElementById('pfs');pf.value=L.fs;pf.disabled=S.locked;const pc=document.getElementById('pcol');pc.value=L.col;pc.disabled=S.locked;const pb2=document.getElementById('pbold');pb2.checked=!!L.bold;pb2.disabled=S.locked;}
+  if(hasS){const pw=document.getElementById('pw');pw.value=L.w.toFixed(1);pw.disabled=S.locked;const ph=document.getElementById('ph');ph.value=L.h.toFixed(1);ph.disabled=S.locked;}
+  document.getElementById('ppos').textContent=`X:${L.x.toFixed(1)}% Y:${L.y.toFixed(1)}%`;renderChips();
+}
+function updProp(k,v){if(!S.sel||S.locked)return;const L=S.layout[S.sel];if(k==='fs')L.fs=parseInt(v)||10;else if(k==='col')L.col=v;else if(k==='bold')L.bold=v;else if(k==='w')L.w=parseFloat(v)||5;else if(k==='h')L.h=parseFloat(v)||5;renderChips();}
+function toggleLock(){S.locked=!S.locked;document.getElementById('btnlock').textContent=S.locked?'🔓 Buka Kunci':'🔒 Kunci Layout';document.getElementById('ebadge').textContent=S.locked?'🔒 Terkunci':'✏️ Mode Edit';document.getElementById('ebadge').style.background=S.locked?'#fff3e0':'var(--g100)';document.getElementById('ebadge').style.color=S.locked?'var(--orange)':'var(--g800)';document.getElementById('ehint').textContent=S.locked?'Terkunci. Klik "Buka Kunci" untuk edit.':'💡 Drag chip untuk pindah. Klik untuk edit properti.';document.getElementById('lockbadge').style.display=S.locked?'block':'none';if(S.sel)selField(S.sel);renderChips();toast(S.locked?'Layout dikunci 🔒':'Layout dibuka 🔓',S.locked?'warn':'ok');}
+function renderChips(){
+  buildLists();const chips=document.getElementById('chips');chips.innerHTML='';const L=S.layout,sc=DW/CW;
+  FIELDS.filter(f=>f.type==='img').forEach(f=>{
+    const p=L[f.id];if(!p||p.w===undefined)return;
+    const box=document.createElement('div');box.className='ebox';
+    box.style.cssText=`left:${p.x}%;top:${p.y}%;width:${p.w}%;height:${p.h}%;border-color:${S.sel===f.id?f.clr:f.clr+'55'};background:${S.sel===f.id?f.clr+'0f':'transparent'}`;
+    if(f.id==='ttdImg'&&S.ttdImg){const img=document.createElement('img');img.src=S.ttdImg;img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.75';box.appendChild(img);}
+    else box.innerHTML=`<span style="font-size:${8*sc}px;color:${f.clr};font-weight:700">${f.id==='qrCode'?'▩ QR':f.label}</span>`;
+    chips.appendChild(box);
+    if(S.sel===f.id&&!S.locked){[{h:'nw',lx:p.x,ly:p.y,c:'nwse-resize'},{h:'ne',lx:p.x+p.w,ly:p.y,c:'nesw-resize'},{h:'sw',lx:p.x,ly:p.y+p.h,c:'nesw-resize'},{h:'se',lx:p.x+p.w,ly:p.y+p.h,c:'nwse-resize'}].forEach(x=>{const rh=document.createElement('div');rh.className='rh';rh.style.cssText=`left:${x.lx}%;top:${x.ly}%;cursor:${x.c};background:${f.clr}`;rh.addEventListener('mousedown',e=>startResize(e,f.id,x.h));chips.appendChild(rh);});}
+  });
+  FIELDS.filter(f=>f.type==='text').forEach(f=>{
+    const p=L[f.id];if(!p||!p.fs)return;let txt='';
+    if(f.grp==='sekolah'){if(f.id==='tglCetak')txt=fmtDate();else if(f.id==='labelKepala')txt=S.settings.labelKepala;else if(f.id==='namaKepala')txt=S.settings.namaKepala;else if(f.id==='nip')txt=S.settings.nip;}
+    else txt=(f.pre||'')+'──'+f.label+'──';
+    const d=document.createElement('div');d.style.cssText=`position:absolute;left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:.5;line-height:1`;d.textContent=txt;chips.appendChild(d);
+  });
+  const pb=L.berlakuSampai;if(pb&&pb.fs){[{t:'*BERLAKU SAMPAI',dy:0,sz:pb.fs*.85,fw:400,fi:'italic'},{t:'dd BULAN YYYY',dy:5.5,sz:pb.fs*1.1,fw:700,fi:'normal'}].forEach(x=>{const d=document.createElement('div');d.style.cssText=`position:absolute;left:${pb.x}%;top:${pb.y+x.dy}%;font-size:${x.sz*sc}px;font-weight:${x.fw};font-style:${x.fi};color:${pb.col};font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:.5;line-height:1`;d.textContent=x.t;chips.appendChild(d);});}
+  FIELDS.forEach(f=>{const p=L[f.id];if(!p)return;const chip=document.createElement('div');chip.className='chip'+(S.sel===f.id?' on':'');chip.style.cssText=`left:${p.x}%;top:${p.y}%;background:${f.clr};cursor:${S.locked?'not-allowed':'grab'}`;chip.textContent='⊕ '+f.label;chip.addEventListener('click',()=>selField(f.id));if(!S.locked)chip.addEventListener('mousedown',e=>startDrag(e,f.id));chips.appendChild(chip);});
+}
+function startDrag(e,id){if(S.locked)return;e.preventDefault();e.stopPropagation();selField(id);const rect=document.getElementById('editor').getBoundingClientRect();S.drag={id,sx:e.clientX,sy:e.clientY,ox:S.layout[id].x,oy:S.layout[id].y,rw:rect.width,rh:rect.height};}
+function startResize(e,id,handle){if(S.locked)return;e.preventDefault();e.stopPropagation();const rect=document.getElementById('editor').getBoundingClientRect();const L=S.layout[id];S.resize={id,handle,sx:e.clientX,sy:e.clientY,ox:L.x,oy:L.y,ow:L.w,oh:L.h,rw:rect.width,rh:rect.height};}
+document.addEventListener('mousemove',e=>{
+  if(S.drag){const dx=((e.clientX-S.drag.sx)/S.drag.rw)*100,dy=((e.clientY-S.drag.sy)/S.drag.rh)*100;S.layout[S.drag.id].x=Math.max(0,Math.min(95,S.drag.ox+dx));S.layout[S.drag.id].y=Math.max(0,Math.min(96,S.drag.oy+dy));renderChips();const pp=document.getElementById('ppos');if(pp)pp.textContent=`X:${S.layout[S.drag.id].x.toFixed(1)}% Y:${S.layout[S.drag.id].y.toFixed(1)}%`;}
+  if(S.resize){const dx=((e.clientX-S.resize.sx)/S.resize.rw)*100,dy=((e.clientY-S.resize.sy)/S.resize.rh)*100;const L=S.layout[S.resize.id];const{handle,ox,oy,ow,oh}=S.resize;if(handle.includes('e'))L.w=Math.max(2,ow+dx);if(handle.includes('s'))L.h=Math.max(2,oh+dy);if(handle.includes('w')){L.x=ox+dx;L.w=Math.max(2,ow-dx);}if(handle.includes('n')){L.y=oy+dy;L.h=Math.max(2,oh-dy);}renderChips();const pw=document.getElementById('pw');if(pw){pw.value=L.w.toFixed(1);document.getElementById('ph').value=L.h.toFixed(1);}}
+});
+document.addEventListener('mouseup',()=>{S.drag=null;S.resize=null;});
+
+// ═══ DATA SISWA ═══
+async function pickPhoto(inp){const f=inp.files[0];if(!f)return;S.curPhoto=await compress(f);document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Foto terupload';}
+
+async function saveSiswa(){
+  const eid=gv('fid');
+  const s={
+    id:eid||uid(),nama:gv('fn').trim(),nisNisn:gv('fnis').trim(),
+    jenisKelamin:document.getElementById('fjk').value,ttl:gv('fttl').trim(),
+    alamat:gv('fal').trim(),golDarah:document.getElementById('fgol').value,
+    noHp:gv('fhp').trim(),berlakuSampai:gv('fbrl').trim(),photo:S.curPhoto,
+  };
+  if(!s.nama){toast('Nama wajib diisi!','err');return;}
+
+  if(SB){
+    showOv('Menyimpan data...');
+    // Upload foto ke Storage jika ada dan masih base64
+    let photoUrl=s.photo&&s.photo.startsWith('data:')?await uploadFotoSB(s.photo,s.nama):s.photo;
+    const rec={nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,berlaku_sampai:s.berlakuSampai,photo_url:photoUrl};
+    let error;
+    if(eid){({error}=await SB.from('siswa').update(rec).eq('id',eid));}
+    else{({error}=await SB.from('siswa').insert(rec));}
+    hideOv();
+    if(error){toast('Gagal simpan: '+error.message,'err');return;}
+    await loadFromDB();
+  }else{
+    if(eid){const i=S.students.findIndex(x=>x.id===eid);if(i>-1)S.students[i]=s;}
+    else S.students.push(s);
+    document.getElementById('sbcnt').textContent=S.students.length;
+    renderList();fillSel();
+  }
+  resetForm();
+  toast(eid?`Data ${s.nama} diperbarui ✅`:`${s.nama} ditambahkan ✅`);
+}
+
+function resetForm(){['fn','fnis','fttl','fal','fhp','fbrl','fid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';document.getElementById('btnsave').textContent='+ Simpan';}
+
+function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
+
+async function hapusSiswa(id){
+  const s=S.students.find(x=>x.id===id);if(!confirm(`Hapus ${s?.nama||'ini'}?`))return;
+  if(SB){const{error}=await SB.from('siswa').delete().eq('id',id);if(error){toast('Gagal hapus: '+error.message,'err');return;}await loadFromDB();}
+  else{S.students=S.students.filter(x=>x.id!==id);document.getElementById('sbcnt').textContent=S.students.length;renderList();fillSel();}
+  toast('Data dihapus','warn');
+}
+
+function renderList(){
+  const q=(document.getElementById('cari')?.value||'').toLowerCase();
+  const fil=S.students.filter(s=>s.nama.toLowerCase().includes(q)||s.nisNisn.toLowerCase().includes(q));
+  const tb=document.getElementById('tbody');tb.innerHTML='';
+  document.getElementById('jml').textContent=S.students.length+' siswa';
+  document.getElementById('nodata').style.display=S.students.length===0?'block':'none';
+  fil.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    const ph=s.photo?`<img src="${s.photo}" class="tph" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
+    tr.innerHTML=`<td style="color:var(--txt3);font-size:11px">${i+1}</td><td>${ph}</td><td style="font-weight:600">${s.nama}</td><td style="font-family:monospace;font-size:12px">${s.nisNisn}</td><td>${s.jenisKelamin}</td><td>${s.photo?'<span style="color:var(--g600);font-weight:700">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
+    <td style="white-space:nowrap">
+      <button onclick="editSiswa('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--blue);border:1px solid #90caf9;padding:4px 9px;font-size:11px">✏</button>
+      <button onclick="hapusSiswa('${s.id}')" class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2;padding:4px 9px;font-size:11px">🗑</button>
+      <button onclick="qdl('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--g700);border:1px solid var(--g300);padding:4px 9px;font-size:11px">📥</button>
+    </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function setMode(m){document.getElementById('ds').style.display=m==='single'?'block':'none';document.getElementById('de').style.display=m==='excel'?'block':'none';document.getElementById('ms').classList.toggle('on',m==='single');document.getElementById('me').classList.toggle('on',m==='excel');}
+
+async function importXL(inp){
+  const f=inp.files[0];if(!f)return;const data=await readF(f);
+  const wb=XLSX.read(data,{type:'base64'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+  if(rows.length<2){toast('File kosong atau format salah','err');return;}
+  const h=rows[0].map(x=>(x||'').toString().toLowerCase());
+  const fc=(...ns)=>{for(const n of ns){const i=h.findIndex(x=>x.includes(n));if(i>-1)return i;}return -1;};
+  const cols={nama:fc('nama'),nisNisn:fc('nis'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),berlakuSampai:fc('berlaku','valid')};
+  const newStudents=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];const g=c=>c>-1?(row[c]||'').toString().trim():'';
+    if(!g(cols.nama))continue;
+    newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),berlakuSampai:g(cols.berlakuSampai),photo:null});
+  }
+  if(SB){
+    showOv(`Import ${newStudents.length} siswa ke database...`);
+    const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,berlaku_sampai:s.berlakuSampai}));
+    const{error}=await SB.from('siswa').insert(recs);
+    hideOv();
+    if(error){toast('Gagal import: '+error.message,'err');return;}
+    await loadFromDB();
+  }else{
+    newStudents.forEach(s=>{s.id=uid();S.students.push(s);});
+    document.getElementById('sbcnt').textContent=S.students.length;
+    renderList();fillSel();
+  }
+  toast(`${newStudents.length} siswa berhasil diimport ✅`);
+}
+
+function dlXLT(){const h=['Nama','NIS/NISN','Jenis Kelamin','TTL','Alamat','Golongan Darah','No HP/WA','Berlaku Sampai'];const ex=['ANZILIE RAHMA','3083045603','Perempuan','HSS, 10-08-2008','JL. Tugu 2 Jan 1949','A','081234567890','31 JULI 2026'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
+
+// ═══ QR ═══
+async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${S.settings.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
+
+// ═══ RENDER KARTU ═══
+async function renderCard(student,canvas,side){
+  canvas.width=CW;canvas.height=CH;const ctx=canvas.getContext('2d');ctx.textBaseline='top';const L=S.layout;
+  const tmpl=side==='front'?S.tmplFront:S.tmplBack;
+  if(tmpl){const img=await loadImg(tmpl);ctx.drawImage(img,0,0,CW,CH);}else{ctx.fillStyle=side==='front'?'#d4f0df':'#e3f2fd';ctx.fillRect(0,0,CW,CH);}
+  if(side==='back')return;
+  if(student.photo){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
+  const qrURL=await getQR(student);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
+  if(S.ttdImg){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
+  const dt=(id,text)=>{const p=L[id];if(!p||!p.fs)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
+  const ss=S.settings;
+  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`T.T.L             : ${student.ttl}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
+  const pb=L.berlakuSampai;if(pb&&pb.fs){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
+}
+
+function buildPrevHTML(student,w,h,side){
+  if(!student)student={nama:'Pilih siswa',nisNisn:'',jenisKelamin:'',ttl:'',alamat:'',golDarah:'',noHp:'',berlakuSampai:'',photo:null};
+  const L=S.layout,sc=w/CW;const tmpl=side==='front'?S.tmplFront:S.tmplBack;
+  let html=`<div class="pcard" style="width:${w}px;height:${h}px;background:${side==='front'?'#d4f0df':'#e3f2fd'}">`;
+  if(tmpl)html+=`<img class="pbg" src="${tmpl}" draggable="false">`;
+  if(side==='front'){
+    const pp=L.photo;if(student.photo)html+=`<img src="${student.photo}" style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else html+=`<div style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
+    const qp=L.qrCode;html+=`<div style="position:absolute;left:${qp.x}%;top:${qp.y}%;width:${qp.w}%;height:${qp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
+    const tp=L.ttdImg;if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;
+    const tx=(id,text)=>{const p=L[id];if(!p||!p.fs)return'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col}">${text}</div>`;};
+    const ss=S.settings;
+    html+=tx('nama',student.nama);html+=tx('nisNisn',`NIS/NISN      : ${student.nisNisn}`);html+=tx('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);html+=tx('ttl',`T.T.L             : ${student.ttl}`);html+=tx('alamat',`Alamat          : ${student.alamat}`);html+=tx('golDarah',`Gol. Darah    : ${student.golDarah}`);html+=tx('noHp',`No. HP/WA    : ${student.noHp}`);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
+    const pb=L.berlakuSampai;if(pb&&pb.fs){html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y}%;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y+5}%;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
+  }
+  html+='</div>';return html;
+}
+
+// ═══ DOWNLOAD ═══
+function fillSel(){const sel=document.getElementById('sels');if(!sel)return;const cur=sel.value;sel.innerHTML='<option value="">— Pilih —</option>';S.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nama+(s.nisNisn?` (${s.nisNisn})`:'');sel.appendChild(o);});if(cur)sel.value=cur;}
+function setPrevSide(side){S.prevSide=side;document.getElementById('pbf').className='btn bsm '+(side==='front'?'bg':'bgy');document.getElementById('pbb').className='btn bsm '+(side==='back'?'bb':'bgy');refreshDL();}
+function refreshDL(){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):S.students[0];document.getElementById('dlprev').innerHTML=buildPrevHTML(s,DW,DH,S.prevSide);}
+async function dlOnePNG(side){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;if(!s){toast('Pilih siswa dulu!','err');return;}showOv('Membuat PNG...');const cv=document.getElementById('cv');await renderCard(s,cv,side);const a=document.createElement('a');a.download=`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`;a.href=cv.toDataURL('image/png');a.click();hideOv();toast(`${s.nama} diunduh ✅`);}
+async function dlOnePDF(side){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;if(!s){toast('Pilih siswa dulu!','err');return;}showOv('Membuat PDF...');const cv=document.getElementById('cv');await renderCard(s,cv,side);const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,85.6,54);doc.save(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.pdf`);hideOv();toast(`PDF ${s.nama} diunduh ✅`);}
+async function dlAllPNG(side){if(!S.students.length){toast('Belum ada siswa!','err');return;}showOv(`Membuat ${S.students.length} kartu...`);const zip=new JSZip();const cv=document.getElementById('cv');for(let i=0;i<S.students.length;i++){const s=S.students[i];updOv(`${i+1}/${S.students.length} — ${s.nama}`);await renderCard(s,cv,side);zip.file(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`,cv.toDataURL('image/png').split(',')[1],{base64:true});}const blob=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`kartu-${side}-semua.zip`;a.click();hideOv();toast(`ZIP ${S.students.length} kartu diunduh ✅`);}
+async function dlAllPDF(side){if(!S.students.length){toast('Belum ada siswa!','err');return;}showOv(`Membuat PDF ${S.students.length} kartu...`);const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});const cv=document.getElementById('cv');for(let i=0;i<S.students.length;i++){const s=S.students[i];updOv(`${i+1}/${S.students.length} — ${s.nama}`);if(i>0)doc.addPage([85.6,54],'landscape');await renderCard(s,cv,side);doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,85.6,54);}doc.save(`kartu-${side}-semua.pdf`);hideOv();toast(`PDF ${S.students.length} kartu diunduh ✅`);}
+async function qdl(id){const s=S.students.find(x=>x.id===id);if(!s)return;showOv('Membuat kartu...');const cv=document.getElementById('cv');await renderCard(s,cv,'front');const a=document.createElement('a');a.download=`kartu-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`;a.href=cv.toDataURL('image/png');a.click();hideOv();toast(`${s.nama} diunduh ✅`);}
+
+// ═══ SETTINGS ═══
+async function loadLogo(inp){const f=inp.files[0];if(!f)return;const src=await readF(f);S.settings.logoSekolah=src;document.getElementById('logo-tw').innerHTML=`<img src="${src}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid var(--border)">`;document.getElementById('logo-lbl').textContent='✅ Logo terupload';applySchoolInfo();toast('Logo diupload ✅');}
+async function loadTTD(inp){const f=inp.files[0];if(!f)return;S.ttdImg=await readF(f);document.getElementById('ttdlbl').textContent='✅ Tanda tangan terupload';document.getElementById('ttdpw').style.display='block';document.getElementById('ttdpi').src=S.ttdImg;updSPrev();renderChips();toast('Tanda tangan diupload ✅');}
+
+function applySchoolInfo(){
+  const ss=S.settings;
+  const inst=gv('s-inst')||ss.namaInstansi;
+  const school=gv('s-school')||ss.namaSekolah;
+  const abbr=gv('s-abbr')||ss.singkatan;
+  document.getElementById('l-inst').textContent=inst;
+  document.getElementById('l-school').textContent=school;
+  document.getElementById('sb-abbr').textContent=abbr;
+  document.getElementById('pv-inst').textContent=inst;
+  document.getElementById('pv-school').textContent=school;
+  const logo=S.settings.logoSekolah;
+  if(logo){
+    ['l-logo','sb-logo','pv-logo'].forEach(id=>{const el=document.getElementById(id);if(el){el.src=logo;el.style.display='block';}});
+    ['l-em','sb-em','pv-logo-em'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  }
+}
+
+async function saveSettings(){
+  const ss=S.settings;
+  ss.namaInstansi=gv('s-inst')||ss.namaInstansi;ss.namaSekolah=gv('s-school')||ss.namaSekolah;ss.singkatan=gv('s-abbr')||ss.singkatan;
+  ss.namaKepala=gv('sn')||ss.namaKepala;ss.nip=gv('snip')||ss.nip;ss.labelKepala=gv('slbl')||ss.labelKepala;ss.kota=gv('skota')||ss.kota;
+  ss.quality=parseFloat(document.getElementById('sq')?.value||80)/100;ss.maxW=parseInt(gv('smw'))||400;ss.maxH=parseInt(gv('smh'))||500;
+  const nu=gv('su').trim(),np=gv('sp'),np2=gv('sp2');
+  if(nu||np){if(np!==np2){toast('Konfirmasi password tidak cocok!','err');return;}if(nu)CREDS.user=nu;if(np)CREDS.pass=np;localStorage.setItem('kp_creds',JSON.stringify(CREDS));document.getElementById('su').value='';document.getElementById('sp').value='';document.getElementById('sp2').value='';document.getElementById('sbun').textContent=CREDS.user;}
+  // Simpan settings ke Supabase jika terhubung
+  if(SB){await SB.from('app_settings').upsert({id:1,data:ss,updated_at:new Date()});}
+  applySchoolInfo();updSPrev();renderChips();
+  toast('Pengaturan disimpan ✅');
+}
+
+function syncSUI(){
+  const ss=S.settings;
+  // Isi form Supabase dari localStorage
+  const url=localStorage.getItem('sb_url')||'';const key=localStorage.getItem('sb_key')||'';
+  document.getElementById('sb-url').value=url;document.getElementById('sb-key').value=key;
+  document.getElementById('s-inst').value=ss.namaInstansi;document.getElementById('s-school').value=ss.namaSekolah;document.getElementById('s-abbr').value=ss.singkatan;
+  document.getElementById('sn').value=ss.namaKepala;document.getElementById('snip').value=ss.nip;document.getElementById('slbl').value=ss.labelKepala;document.getElementById('skota').value=ss.kota;
+  document.getElementById('sq').value=Math.round(ss.quality*100);document.getElementById('qlbl').textContent=Math.round(ss.quality*100);
+  document.getElementById('smw').value=ss.maxW;document.getElementById('smh').value=ss.maxH;
+  updSPrev();applySchoolInfo();updDBStatus(!!SB);
+}
+
+function updSPrev(){const ss=S.settings;document.getElementById('pvtgl').textContent=fmtDate();document.getElementById('pvkep').textContent=gv('slbl')||ss.labelKepala;document.getElementById('pvnama').textContent=gv('sn')||ss.namaKepala;document.getElementById('pvnip').textContent=gv('snip')||ss.nip;const t=document.getElementById('pvttd');t.innerHTML=S.ttdImg?`<img src="${S.ttdImg}" style="max-width:86px;max-height:30px;object-fit:contain">`:'ttd preview';}
+
+// INIT
+buildLists();
+</script>
+</body>
+</html>
