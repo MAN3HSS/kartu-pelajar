@@ -1,0 +1,64 @@
+name: 🏓 Supabase Keep Alive
+
+# Jadwal: setiap 4 hari sekali jam 07.00 UTC (14.00 WIB)
+# + bisa dijalankan manual dari GitHub
+on:
+  schedule:
+    - cron: '0 7 */4 * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: 📅 Cek tanggal hari ini
+        id: cek
+        run: |
+          HARI_INI=$(date +%m-%d)
+          echo "hari_ini=$HARI_INI" >> $GITHUB_OUTPUT
+          if [ "$HARI_INI" = "01-01" ]; then
+            echo "tahun_baru=true" >> $GITHUB_OUTPUT
+          else
+            echo "tahun_baru=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🗑️ Reset data ping (khusus 1 Januari)
+        if: steps.cek.outputs.tahun_baru == 'true'
+        run: |
+          echo "🎆 Tahun baru! Menghapus data ping lama..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X DELETE \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/ping_log?id=neq.00000000-0000-0000-0000-000000000000" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Status reset: $STATUS"
+          echo "✅ Data ping lama dihapus — mulai tahun baru!"
+
+      - name: 🏓 Kirim ping ke Supabase
+        run: |
+          echo "🏓 Mengirim ping..."
+          WAKTU=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/ping_log" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"keterangan\": \"auto-ping\", \"waktu\": \"$WAKTU\"}")
+          echo "Status: $STATUS"
+          if [ "$STATUS" = "201" ]; then
+            echo "✅ Ping berhasil! Supabase tetap aktif."
+          else
+            echo "⚠️ Status: $STATUS — cek konfigurasi secret"
+          fi
+
+      - name: 📊 Info selesai
+        run: |
+          echo "================================"
+          echo "✅ Keep Alive selesai"
+          echo "🕐 Waktu: $(date '+%d %B %Y, %H:%M WIB')"
+          echo "⏭ Ping berikutnya: 4 hari lagi"
+          echo "================================"
