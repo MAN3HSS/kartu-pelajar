@@ -221,7 +221,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <div class="main">
 <div class="topbar">
   <div><div class="tb-title" id="tbt">Template Kartu</div></div>
-  <button id="dbbadge" class="db-badge" onclick="goPage(4)" title="Klik untuk pengaturan database" style="background:#ffebee;color:var(--red)">🔴 Mode Lokal</button>
+  <button id="dbbadge" class="db-badge" onclick="goPage(4)" title="Klik untuk pengaturan database" style="background:#fff3e0;color:var(--orange)">⏳ Menghubungkan...</button>
   <div class="step-dots"><div class="sdot act"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div></div>
   <div class="tb-sub" id="tbs">Langkah 1 dari 4</div>
 </div>
@@ -541,8 +541,16 @@ const S={
 };
 
 // ═══ SUPABASE ═══
-function initSB(){
-  try{SB=supabase.createClient(_SB_URL,_SB_KEY);return true;}catch(e){SB=null;return false;}
+async function initSB(){
+  try{
+    if(typeof supabase==='undefined'){updDBStatus(false);return false;}
+    SB=supabase.createClient(_SB_URL,_SB_KEY);
+    // Test koneksi nyata ke database
+    const{error}=await SB.from('siswa').select('id',{count:'exact',head:true});
+    if(error){SB=null;updDBStatus(false);return false;}
+    updDBStatus(true);
+    return true;
+  }catch(e){SB=null;updDBStatus(false);return false;}
 }
 
 async function connectDB(){
@@ -627,8 +635,12 @@ function doLogin(){
     document.getElementById('login-page').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('sbun').textContent=u;
-    initSB();syncSUI();initEditor();renderChips();
-    if(SB){updDBStatus(true);loadFromDB();}
+    syncSUI();initEditor();renderChips();
+    showOv('Menghubungkan ke database...');
+    const ok=await initSB();
+    hideOv();
+    if(ok){await loadFromDB();toast('🟢 Terhubung ke database!');}
+    else{toast('⚠️ Database tidak terhubung — Mode Lokal aktif','warn');}
   }else{
     const e=document.getElementById('lerr');e.style.display='block';
     document.getElementById('lp').value='';
@@ -641,8 +653,12 @@ if(sessionStorage.getItem('kp_ok')){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='block';
   setTimeout(()=>{
-    initSB();syncSUI();initEditor();renderChips();
-    if(SB){updDBStatus(true);loadFromDB();}
+    syncSUI();initEditor();renderChips();
+    showOv('Menghubungkan ke database...');
+    const ok=await initSB();
+    hideOv();
+    if(ok){await loadFromDB();toast('🟢 Terhubung ke database!');}
+    else{toast('⚠️ Database tidak terhubung — Mode Lokal aktif','warn');}
   },100);
 }
 
