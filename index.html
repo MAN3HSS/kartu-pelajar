@@ -395,61 +395,9 @@ input[type=range]{width:100%;accent-color:var(--g600)}
   <div class="row">
     <div class="f300">
 
-      <!-- SUPABASE CONNECTION -->
-      <div class="card" style="border:2px solid var(--g300)">
-        <div class="ctitle">🗄️ Koneksi Database Supabase</div>
-        <div id="db-info" class="ibox err" style="margin-bottom:12px">
-          <div class="ibox-t" id="db-status-title">🔴 Belum Terhubung</div>
-          <span id="db-status-desc">Data tersimpan sementara di browser. Hubungkan ke Supabase agar data permanen.</span>
-        </div>
-        <div class="fg">
-          <label class="fl">Supabase Project URL</label>
-          <input class="fi fi-mono" id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co">
-        </div>
-        <div class="fg">
-          <label class="fl">Supabase Anon Key</label>
-          <textarea class="fi fi-mono" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." rows="3"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button class="btn bg f1" onclick="connectDB()">🔗 Hubungkan</button>
-          <button class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2" onclick="disconnectDB()">Putuskan</button>
-        </div>
-        <details style="cursor:pointer">
-          <summary style="font-size:12px;font-weight:600;color:var(--txt2);padding:6px 0">📋 SQL Setup Tabel (klik untuk lihat)</summary>
-          <div class="sql-box">-- Jalankan di Supabase SQL Editor
-create table if not exists siswa (
-  id uuid default gen_random_uuid() primary key,
-  nama text not null,
-  nis_nisn text,
-  jenis_kelamin text,
-  ttl text,
-  alamat text,
-  gol_darah text,
-  no_hp text,
-  berlaku_sampai text,
-  photo_url text,
-  created_at timestamptz default now()
-);
 
-create table if not exists app_settings (
-  id int8 primary key default 1,
-  data jsonb default '{}',
-  updated_at timestamptz default now()
-);</div>
-          <button class="btn bg bsm" style="margin-top:8px" onclick="copySql()">📋 Copy SQL</button>
-          <div class="ibox info" style="margin-top:8px">
-            <div class="ibox-t">Cara setup Storage (foto)</div>
-            Supabase → Storage → New Bucket → Nama: <b>foto-siswa</b> → Public: ✅ On
-          </div>
-        </details>
-        <div class="ibox" style="margin-top:10px">
-          <div class="ibox-t">📍 Cara dapat URL & Key</div>
-          Login supabase.com → Project → Settings → API<br>
-          Copy <b>Project URL</b> dan <b>anon public key</b>
-        </div>
-      </div>
 
-      <!-- IDENTITAS SEKOLAH -->
+            <!-- IDENTITAS SEKOLAH -->
       <div class="card">
         <div class="ctitle">🏛️ Identitas Sekolah</div>
         <div class="fg">
@@ -570,7 +518,11 @@ const IL={
 };
 
 let CREDS=JSON.parse(localStorage.getItem('kp_creds')||'{"user":"admin","pass":"man3hss"}');
-let SB=null; // Supabase client
+let SB=null;
+
+// ═══ KONFIGURASI SUPABASE (sudah tertanam) ═══
+const _SB_URL = localStorage.getItem('sb_url') || 'https://mhjzlszxchsgcfftkxrh.supabase.co';
+const _SB_KEY = localStorage.getItem('sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1oanpsc3p4Y2hzZ2NmZnRreHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMzMxMjMsImV4cCI6MjA5NDkwOTEyM30.AaD17YwJv2ulMP2rmIceqaRaQ492h8BqUCNC5dEp7Ac';
 
 const S={
   tmplFront:null,tmplBack:null,ttdImg:null,
@@ -590,12 +542,7 @@ const S={
 
 // ═══ SUPABASE ═══
 function initSB(){
-  const url=localStorage.getItem('sb_url');
-  const key=localStorage.getItem('sb_key');
-  if(url&&key){
-    try{SB=supabase.createClient(url,key);return true;}catch(e){SB=null;}
-  }
-  return false;
+  try{SB=supabase.createClient(_SB_URL,_SB_KEY);return true;}catch(e){SB=null;return false;}
 }
 
 async function connectDB(){
@@ -981,8 +928,8 @@ async function saveSettings(){
 function syncSUI(){
   const ss=S.settings;
   // Isi form Supabase dari localStorage
-  const url=localStorage.getItem('sb_url')||'';const key=localStorage.getItem('sb_key')||'';
-  document.getElementById('sb-url').value=url;document.getElementById('sb-key').value=key;
+  document.getElementById('sb-url').value=_SB_URL;
+  document.getElementById('sb-key').value=_SB_KEY;
   document.getElementById('s-inst').value=ss.namaInstansi;document.getElementById('s-school').value=ss.namaSekolah;document.getElementById('s-abbr').value=ss.singkatan;
   document.getElementById('sn').value=ss.namaKepala;document.getElementById('snip').value=ss.nip;document.getElementById('slbl').value=ss.labelKepala;document.getElementById('skota').value=ss.kota;
   document.getElementById('sq').value=Math.round(ss.quality*100);document.getElementById('qlbl').textContent=Math.round(ss.quality*100);
