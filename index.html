@@ -628,7 +628,7 @@ async function uploadFotoSB(base64,nama){
 }
 
 // ═══ LOGIN ═══
-function doLogin(){
+async function doLogin(){
   const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
   if(u===CREDS.user&&p===CREDS.pass){
     sessionStorage.setItem('kp_ok','1');
@@ -636,11 +636,11 @@ function doLogin(){
     document.getElementById('app').style.display='block';
     document.getElementById('sbun').textContent=u;
     syncSUI();initEditor();renderChips();
-    showOv('Menghubungkan ke database...');
-    const ok=await initSB();
-    hideOv();
-    if(ok){await loadFromDB();toast('🟢 Terhubung ke database!');}
-    else{toast('⚠️ Database tidak terhubung — Mode Lokal aktif','warn');}
+    // Koneksi Supabase di background — tidak block tampilan
+    initSB().then(ok=>{
+      if(ok){loadFromDB();toast('🟢 Database terhubung!');}
+      else{toast('⚠️ Mode Lokal — cek koneksi internet','warn');}
+    });
   }else{
     const e=document.getElementById('lerr');e.style.display='block';
     document.getElementById('lp').value='';
@@ -654,11 +654,11 @@ if(sessionStorage.getItem('kp_ok')){
   document.getElementById('app').style.display='block';
   setTimeout(()=>{
     syncSUI();initEditor();renderChips();
-    showOv('Menghubungkan ke database...');
-    const ok=await initSB();
-    hideOv();
-    if(ok){await loadFromDB();toast('🟢 Terhubung ke database!');}
-    else{toast('⚠️ Database tidak terhubung — Mode Lokal aktif','warn');}
+    // Koneksi Supabase di background — tidak block tampilan
+    initSB().then(ok=>{
+      if(ok){loadFromDB();toast('🟢 Database terhubung!');}
+      else{toast('⚠️ Mode Lokal — cek koneksi internet','warn');}
+    });
   },100);
 }
 
