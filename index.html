@@ -545,12 +545,19 @@ async function initSB(){
   try{
     if(typeof supabase==='undefined'){updDBStatus(false);return false;}
     SB=supabase.createClient(_SB_URL,_SB_KEY);
-    // Test koneksi nyata ke database
-    const{error}=await SB.from('siswa').select('id',{count:'exact',head:true});
-    if(error){SB=null;updDBStatus(false);return false;}
-    updDBStatus(true);
-    return true;
-  }catch(e){SB=null;updDBStatus(false);return false;}
+    // Test koneksi dengan timeout 6 detik
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000));
+    const test=SB.from('siswa').select('id',{count:'exact',head:true});
+    const{error}=await Promise.race([test,timeout]);
+    // Jika error tapi bukan auth error = tetap konek (tabel kosong OK)
+    if(error&&(error.code==='PGRST301'||error.message?.includes('JWT'))){
+      SB=null;updDBStatus(false);return false;
+    }
+    updDBStatus(true);return true;
+  }catch(e){
+    // Timeout atau error lain
+    SB=null;updDBStatus(false);return false;
+  }
 }
 
 async function connectDB(){
@@ -639,8 +646,8 @@ async function doLogin(){
     // Koneksi Supabase di background — tidak block tampilan
     initSB().then(ok=>{
       if(ok){loadFromDB();toast('🟢 Database terhubung!');}
-      else{toast('⚠️ Mode Lokal — cek koneksi internet','warn');}
-    });
+      else{updDBStatus(false);toast('⚠️ Mode Lokal aktif','warn');}
+    }).catch(()=>{SB=null;updDBStatus(false);});
   }else{
     const e=document.getElementById('lerr');e.style.display='block';
     document.getElementById('lp').value='';
@@ -657,8 +664,8 @@ if(sessionStorage.getItem('kp_ok')){
     // Koneksi Supabase di background — tidak block tampilan
     initSB().then(ok=>{
       if(ok){loadFromDB();toast('🟢 Database terhubung!');}
-      else{toast('⚠️ Mode Lokal — cek koneksi internet','warn');}
-    });
+      else{updDBStatus(false);toast('⚠️ Mode Lokal aktif','warn');}
+    }).catch(()=>{SB=null;updDBStatus(false);});
   },100);
 }
 
@@ -702,7 +709,7 @@ function showOv(m){document.getElementById('ovmsg').textContent=m;document.getEl
 function updOv(d){document.getElementById('ovd').textContent=d;}
 function hideOv(){document.getElementById('overlay').classList.remove('on');}
 function copySql(){
-  const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());`;
+  const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());\n\nalter table siswa disable row level security;\nalter table app_settings disable row level security;`;
   navigator.clipboard.writeText(sql).then(()=>toast('SQL berhasil dicopy ✅')).catch(()=>toast('Gagal copy','err'));
 }
 
