@@ -545,9 +545,6 @@ function initSB(){
     SB=supabase.createClient(_SB_URL,_SB_KEY);
     updDBStatus(true);return true;
   }catch(e){SB=null;updDBStatus(false);return false;}
-}catch(e){SB=null;}
-  }
-  return false;
 }
 
 
@@ -556,18 +553,9 @@ function initSB(){
 
 function updDBStatus(ok){
   const b=document.getElementById('dbbadge');
-  const inf=document.getElementById('db-info');
-  const tit=document.getElementById('db-status-title');
-  const desc=document.getElementById('db-status-desc');
-  if(ok){
-    b.textContent='🟢 Database';b.style.background='var(--g100)';b.style.color='var(--g700)';
-    inf.className='ibox ok';tit.textContent='🟢 Terhubung ke Supabase';
-    desc.textContent='Data tersimpan permanen di cloud. Bisa diakses dari perangkat manapun.';
-  }else{
-    b.textContent='🔴 Mode Lokal';b.style.background='#ffebee';b.style.color='var(--red)';
-    inf.className='ibox err';tit.textContent='🔴 Belum Terhubung';
-    desc.textContent='Data tersimpan sementara di browser. Hubungkan Supabase agar permanen.';
-  }
+  if(!b)return;
+  if(ok){b.textContent='🟢 Database';b.style.background='var(--g100)';b.style.color='var(--g700)';}
+  else{b.textContent='🔴 Mode Lokal';b.style.background='#ffebee';b.style.color='var(--red)';}
 }
 
 async function loadFromDB(){
