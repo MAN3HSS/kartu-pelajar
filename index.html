@@ -241,10 +241,12 @@ input[type=range]{width:100%;accent-color:var(--g600)}
         <label class="uz"><input type="file" accept="image/*" onchange="loadTmpl('front',this)">
           <div class="uz-i">📄</div><div class="uz-l" id="lbl-f">Klik upload template depan</div>
           <div class="uz-s">JPG / PNG</div></label>
+        <button class="btn bgy bsm" style="width:100%;margin-top:-4px;margin-bottom:10px" onclick="hapusTmpl('front')">🗑️ Hapus Template Depan</button>
         <div class="ctitle" style="margin-top:12px">🔄 Kartu Belakang</div>
         <label class="uz blue"><input type="file" accept="image/*" onchange="loadTmpl('back',this)">
           <div class="uz-i">🔵</div><div class="uz-l" id="lbl-b">Klik upload template belakang</div>
           <div class="uz-s">Sama untuk semua siswa</div></label>
+        <button class="btn bgy bsm" style="width:100%;margin-top:-4px" onclick="hapusTmpl('back')">🗑️ Hapus Template Belakang</button>
       </div>
       <button class="btn bg bl" style="font-size:14px;padding:12px" onclick="goPage(1)">Lanjut ke Atur Posisi →</button>
     </div>
@@ -700,6 +702,33 @@ function copySql(){
   navigator.clipboard.writeText(sql).then(()=>toast('SQL berhasil dicopy ✅')).catch(()=>toast('Gagal copy','err'));
 }
 
+function hapusTmpl(side){
+  if(!confirm(`Hapus template ${side==='front'?'depan':'belakang'}? Kartu akan pakai warna polos lagi.`))return;
+  if(side==='front'){
+    S.tmplFront=null;
+    document.getElementById('lbl-f').textContent='Klik upload template depan';
+    document.getElementById('pvf').innerHTML='Belum ada';
+    document.getElementById('edimg').style.display='none';document.getElementById('edimg').src='';
+    document.getElementById('edbg').style.display='flex';
+  }else{
+    S.tmplBack=null;
+    document.getElementById('lbl-b').textContent='Klik upload template belakang';
+    document.getElementById('pvb').innerHTML='Belum ada';
+  }
+  refreshDL();
+  toast(`Template ${side==='front'?'depan':'belakang'} dihapus, menyimpan...`);
+  saveTemplateDB();
+}
+async function saveTemplateDB(){
+  if(!SB){toast('Supabase belum terhubung, template hanya tersimpan sementara di browser ini','warn');return;}
+  try{
+    const{data:existing}=await SB.from('app_settings').select('data').eq('id',1).maybeSingle();
+    const merged={...(existing?.data||{}),tmplFront:S.tmplFront,tmplBack:S.tmplBack};
+    const{error}=await SB.from('app_settings').upsert({id:1,data:merged,updated_at:new Date()});
+    if(error)throw error;
+    toast('Template tersimpan ke database ✅');
+  }catch(e){toast('⚠️ Template GAGAL tersimpan ke database: '+e.message,'err');}
+}
 async function saveLayoutDB(){
   if(!SB){toast('Supabase belum terhubung, cek pengaturan koneksi','err');return;}
   showOv('Menyimpan layout & template...');
@@ -716,8 +745,9 @@ async function saveLayoutDB(){
 // ═══ TEMPLATE ═══
 async function loadTmpl(side,inp){
   const f=inp.files[0];if(!f)return;const src=await readF(f);
-  if(side==='front'){S.tmplFront=src;document.getElementById('lbl-f').textContent='✅ Depan terupload';document.getElementById('pvf').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;document.getElementById('edimg').src=src;document.getElementById('edimg').style.display='block';document.getElementById('edbg').style.display='none';toast('Template depan diupload ✅');}
-  else{S.tmplBack=src;document.getElementById('lbl-b').textContent='✅ Belakang terupload';document.getElementById('pvb').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;toast('Template belakang diupload ✅');}
+  if(side==='front'){S.tmplFront=src;document.getElementById('lbl-f').textContent='✅ Depan terupload';document.getElementById('pvf').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;document.getElementById('edimg').src=src;document.getElementById('edimg').style.display='block';document.getElementById('edbg').style.display='none';toast('Template depan diupload, menyimpan...');}
+  else{S.tmplBack=src;document.getElementById('lbl-b').textContent='✅ Belakang terupload';document.getElementById('pvb').innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:fill">`;toast('Template belakang diupload, menyimpan...');}
+  await saveTemplateDB();
 }
 
 // ═══ EDITOR ═══
