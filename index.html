@@ -136,8 +136,10 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 .ibox.ok{background:var(--g100);border-color:var(--g500)}.ibox.ok .ibox-t{color:var(--g700)}
 .ibox.err{background:#ffebee;border-color:var(--red)}.ibox.err .ibox-t{color:var(--red)}
 #editor{position:relative;overflow:hidden;border-radius:var(--rl);box-shadow:var(--shadow-lg);user-select:none;flex-shrink:0;border:2px solid var(--border)}
-.chip{position:absolute;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;color:#fff;cursor:grab;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:10;transform:translateY(-110%);user-select:none;border:1.5px solid rgba(255,255,255,.3)}
+.chip{position:absolute;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;color:#fff;cursor:grab;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:10;transform:translateY(-110%);user-select:none;border:1.5px solid rgba(255,255,255,.3);transition:z-index 0s,filter .1s}
+.chip:hover{z-index:25;filter:brightness(1.18);box-shadow:0 3px 10px rgba(0,0,0,.4)}
 .chip.on{border-color:white;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
+.chip.on:hover{z-index:25}
 .ebox{position:absolute;box-sizing:border-box;border:2px dashed;pointer-events:none;display:flex;align-items:center;justify-content:center}
 .rh{position:absolute;width:11px;height:11px;background:var(--blue);border:2px solid #fff;border-radius:3px;z-index:30;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .pcard{position:relative;overflow:hidden;border-radius:10px;box-shadow:var(--shadow-lg);user-select:none;display:inline-block;flex-shrink:0}
