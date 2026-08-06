@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -100,6 +101,7 @@ h2{font-family:var(--font-h);font-size:21px;color:var(--g800);margin-bottom:5px}
 .br2b{background:var(--red);color:#fff}
 .bsm{padding:6px 12px;font-size:12px}
 .bout{background:transparent;border:1.5px solid var(--g500);color:var(--g700)}.bout:hover{background:var(--g50)}
+.bgold{background:var(--gold-dark);color:#fff}.bgold:hover{background:#7a5f1f}
 .fg{margin-bottom:13px}
 .fl{display:block;font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:5px}
 .fi{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);color:var(--txt);background:var(--bg);transition:var(--tr);outline:none}
@@ -321,6 +323,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <div class="fg"><label class="fl">Tempat, Tanggal Lahir</label><input class="fi" id="fttl" placeholder="HSS, 10-08-2008"></div>
           <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="fal" placeholder="Jl. ..." rows="2"></textarea></div>
           <div class="fg"><label class="fl">No. HP/WA Orang Tua</label><input class="fi" id="fhp" placeholder="08xxxxxxxxxx"></div>
+          <div class="fg"><label class="fl">No. Kartu RFID <span style="font-weight:400;color:var(--txt3)">(opsional — barcode otomatis dibuat)</span></label><input class="fi" id="frfid" placeholder="0004512389"></div>
           <div class="fg"><label class="fl">Berlaku Sampai</label><input class="fi" id="fbrl" placeholder="31 JULI 2026"></div>
           <input type="hidden" id="fid">
           <div style="display:flex;gap:8px">
@@ -332,7 +335,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
             <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
             <div class="uz-s">.xlsx / .xls / .csv</div></label>
-          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Jenis Kelamin | TTL | Alamat | Golongan Darah | No HP | Berlaku Sampai</div>
+          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Jenis Kelamin | TTL | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai</div>
           <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
         </div>
       </div>
@@ -361,8 +364,10 @@ input[type=range]{width:100%;accent-color:var(--g600)}
     <div class="f300">
       <div class="card">
         <div class="ctitle">📦 Semua Siswa</div>
-        <button class="btn bb bl" onclick="dlAllPDF('front')">📄 PDF Depan — semua</button>
-        <button class="btn bb bl" onclick="dlAllPDF('back')">📄 PDF Belakang — semua</button>
+        <button class="btn bgold bl" onclick="cetakMassalGrid('front')">🖨️ Cetak Massal Depan (Grid A4, 8/hal)</button>
+        <button class="btn bgold bl" onclick="cetakMassalGrid('back')">🖨️ Cetak Massal Belakang (Grid A4, 8/hal)</button>
+        <button class="btn bb bl" onclick="dlAllPDF('front')">📄 PDF Depan — semua (1 kartu/hal)</button>
+        <button class="btn bb bl" onclick="dlAllPDF('back')">📄 PDF Belakang — semua (1 kartu/hal)</button>
         <button class="btn bg bl" onclick="dlAllPNG('front')">🖼 PNG Depan — semua (ZIP)</button>
         <button class="btn bg bl" onclick="dlAllPNG('back')">🖼 PNG Belakang — semua (ZIP)</button>
       </div>
@@ -500,6 +505,7 @@ const FIELDS=[
   {id:'noHp',         label:'No. HP/WA',      type:'text',grp:'siswa', clr:'#37474f',pre:'No. HP/WA    : '},
   {id:'berlakuSampai',label:'Berlaku Sampai', type:'exp', grp:'siswa', clr:'#0d4d25'},
   {id:'qrCode',       label:'QR Code',        type:'img', grp:'siswa', clr:'#212121'},
+  {id:'barcodeRfid',  label:'Barcode RFID',   type:'img', grp:'siswa', clr:'#5d4037'},
   {id:'tglCetak',     label:'Tgl. Cetak',     type:'text',grp:'sekolah',clr:'#01579b'},
   {id:'labelKepala',  label:'Label Kepala',   type:'text',grp:'sekolah',clr:'#01579b'},
   {id:'ttdImg',       label:'Tanda Tangan',   type:'img', grp:'sekolah',clr:'#01579b'},
@@ -512,6 +518,7 @@ const IL={
   ttl:{x:29,y:56,fs:11,bold:false,col:'#333'},alamat:{x:29,y:65,fs:10,bold:false,col:'#333'},
   golDarah:{x:29,y:74,fs:12,bold:false,col:'#333'},noHp:{x:29,y:83,fs:11,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:88,fs:11,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
+  barcodeRfid:{x:3,y:3,w:32,h:15},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
   ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
 };
@@ -566,7 +573,7 @@ async function loadFromDB(){
     S.students=data.map(r=>({
       id:r.id,nama:r.nama,nisNisn:r.nis_nisn||'',jenisKelamin:r.jenis_kelamin||'Laki-laki',
       ttl:r.ttl||'',alamat:r.alamat||'',golDarah:r.gol_darah||'A',
-      noHp:r.no_hp||'',berlakuSampai:r.berlaku_sampai||'',photo:r.photo_url,
+      noHp:r.no_hp||'',noRfid:r.no_rfid||'',berlakuSampai:r.berlaku_sampai||'',photo:r.photo_url,
     }));
     document.getElementById('sbcnt').textContent=S.students.length;
     renderList();fillSel();
@@ -652,7 +659,7 @@ function showOv(m){document.getElementById('ovmsg').textContent=m;document.getEl
 function updOv(d){document.getElementById('ovd').textContent=d;}
 function hideOv(){document.getElementById('overlay').classList.remove('on');}
 function copySql(){
-  const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());`;
+  const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,no_rfid text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());`;
   navigator.clipboard.writeText(sql).then(()=>toast('SQL berhasil dicopy ✅')).catch(()=>toast('Gagal copy','err'));
 }
 
@@ -725,7 +732,7 @@ async function saveSiswa(){
     id:eid||uid(),nama:gv('fn').trim(),nisNisn:gv('fnis').trim(),
     jenisKelamin:document.getElementById('fjk').value,ttl:gv('fttl').trim(),
     alamat:gv('fal').trim(),golDarah:document.getElementById('fgol').value,
-    noHp:gv('fhp').trim(),berlakuSampai:gv('fbrl').trim(),photo:S.curPhoto,
+    noHp:gv('fhp').trim(),noRfid:gv('frfid').trim(),berlakuSampai:gv('fbrl').trim(),photo:S.curPhoto,
   };
   if(!s.nama){toast('Nama wajib diisi!','err');return;}
 
@@ -733,7 +740,7 @@ async function saveSiswa(){
     showOv('Menyimpan data...');
     // Upload foto ke Storage jika ada dan masih base64
     let photoUrl=s.photo&&s.photo.startsWith('data:')?await uploadFotoSB(s.photo,s.nama):s.photo;
-    const rec={nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,berlaku_sampai:s.berlakuSampai,photo_url:photoUrl};
+    const rec={nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai,photo_url:photoUrl};
     let error;
     if(eid){({error}=await SB.from('siswa').update(rec).eq('id',eid));}
     else{({error}=await SB.from('siswa').insert(rec));}
@@ -750,9 +757,9 @@ async function saveSiswa(){
   toast(eid?`Data ${s.nama} diperbarui ✅`:`${s.nama} ditambahkan ✅`);
 }
 
-function resetForm(){['fn','fnis','fttl','fal','fhp','fbrl','fid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';document.getElementById('btnsave').textContent='+ Simpan';}
+function resetForm(){['fn','fnis','fttl','fal','fhp','frfid','fbrl','fid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';document.getElementById('btnsave').textContent='+ Simpan';}
 
-function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
+function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('frfid').value=s.noRfid||'';document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
 
 async function hapusSiswa(id){
   const s=S.students.find(x=>x.id===id);if(!confirm(`Hapus ${s?.nama||'ini'}?`))return;
@@ -788,16 +795,16 @@ async function importXL(inp){
   if(rows.length<2){toast('File kosong atau format salah','err');return;}
   const h=rows[0].map(x=>(x||'').toString().toLowerCase());
   const fc=(...ns)=>{for(const n of ns){const i=h.findIndex(x=>x.includes(n));if(i>-1)return i;}return -1;};
-  const cols={nama:fc('nama'),nisNisn:fc('nis'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),berlakuSampai:fc('berlaku','valid')};
+  const cols={nama:fc('nama'),nisNisn:fc('nis'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid')};
   const newStudents=[];
   for(let i=1;i<rows.length;i++){
     const row=rows[i];const g=c=>c>-1?(row[c]||'').toString().trim():'';
     if(!g(cols.nama))continue;
-    newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),berlakuSampai:g(cols.berlakuSampai),photo:null});
+    newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),noRfid:g(cols.noRfid),berlakuSampai:g(cols.berlakuSampai),photo:null});
   }
   if(SB){
     showOv(`Import ${newStudents.length} siswa ke database...`);
-    const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,berlaku_sampai:s.berlakuSampai}));
+    const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai}));
     const{error}=await SB.from('siswa').insert(recs);
     hideOv();
     if(error){toast('Gagal import: '+error.message,'err');return;}
@@ -810,12 +817,20 @@ async function importXL(inp){
   toast(`${newStudents.length} siswa berhasil diimport ✅`);
 }
 
-function dlXLT(){const h=['Nama','NIS/NISN','Jenis Kelamin','TTL','Alamat','Golongan Darah','No HP/WA','Berlaku Sampai'];const ex=['ANZILIE RAHMA','3083045603','Perempuan','HSS, 10-08-2008','JL. Tugu 2 Jan 1949','A','081234567890','31 JULI 2026'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
+function dlXLT(){const h=['Nama','NIS/NISN','Jenis Kelamin','TTL','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai'];const ex=['ANZILIE RAHMA','3083045603','Perempuan','HSS, 10-08-2008','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
 async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${S.settings.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 
 // ═══ RENDER KARTU ═══
+async function getBarcode(s){
+  if(!s.noRfid)return null;
+  try{
+    const bcv=document.createElement('canvas');
+    JsBarcode(bcv,s.noRfid,{format:'CODE128',displayValue:true,fontSize:16,margin:4,height:40});
+    return bcv.toDataURL('image/png');
+  }catch(e){return null;}
+}
 async function renderCard(student,canvas,side){
   canvas.width=CW;canvas.height=CH;const ctx=canvas.getContext('2d');ctx.textBaseline='top';const L=S.layout;
   const tmpl=side==='front'?S.tmplFront:S.tmplBack;
@@ -823,6 +838,7 @@ async function renderCard(student,canvas,side){
   if(side==='back')return;
   if(student.photo){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   const qrURL=await getQR(student);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
+  if(student.noRfid){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(S.ttdImg){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
   const ss=S.settings;
@@ -838,6 +854,7 @@ function buildPrevHTML(student,w,h,side){
   if(side==='front'){
     const pp=L.photo;if(student.photo)html+=`<img src="${student.photo}" style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else html+=`<div style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
     const qp=L.qrCode;html+=`<div style="position:absolute;left:${qp.x}%;top:${qp.y}%;width:${qp.w}%;height:${qp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
+    if(student.noRfid){const bp=L.barcodeRfid;html+=`<div style="position:absolute;left:${bp.x}%;top:${bp.y}%;width:${bp.w}%;height:${bp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#666;border:1px solid #ddd">|‖|Barcode</div>`;}
     const tp=L.ttdImg;if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs)return'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col}">${text}</div>`;};
     const ss=S.settings;
@@ -855,6 +872,31 @@ async function dlOnePNG(side){const id=document.getElementById('sels')?.value;co
 async function dlOnePDF(side){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;if(!s){toast('Pilih siswa dulu!','err');return;}showOv('Membuat PDF...');const cv=document.getElementById('cv');await renderCard(s,cv,side);const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,85.6,54);doc.save(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.pdf`);hideOv();toast(`PDF ${s.nama} diunduh ✅`);}
 async function dlAllPNG(side){if(!S.students.length){toast('Belum ada siswa!','err');return;}showOv(`Membuat ${S.students.length} kartu...`);const zip=new JSZip();const cv=document.getElementById('cv');for(let i=0;i<S.students.length;i++){const s=S.students[i];updOv(`${i+1}/${S.students.length} — ${s.nama}`);await renderCard(s,cv,side);zip.file(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`,cv.toDataURL('image/png').split(',')[1],{base64:true});}const blob=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`kartu-${side}-semua.zip`;a.click();hideOv();toast(`ZIP ${S.students.length} kartu diunduh ✅`);}
 async function dlAllPDF(side){if(!S.students.length){toast('Belum ada siswa!','err');return;}showOv(`Membuat PDF ${S.students.length} kartu...`);const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});const cv=document.getElementById('cv');for(let i=0;i<S.students.length;i++){const s=S.students[i];updOv(`${i+1}/${S.students.length} — ${s.nama}`);if(i>0)doc.addPage([85.6,54],'landscape');await renderCard(s,cv,side);doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,85.6,54);}doc.save(`kartu-${side}-semua.pdf`);hideOv();toast(`PDF ${S.students.length} kartu diunduh ✅`);}
+async function cetakMassalGrid(side){
+  if(!S.students.length){toast('Belum ada siswa!','err');return;}
+  showOv(`Menyusun ${S.students.length} kartu untuk cetak massal...`);
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const cv=document.getElementById('cv');
+  const cardW=85.6,cardH=54,cols=2,rows=4,gapX=4,gapY=4;
+  const totalW=cols*cardW+(cols-1)*gapX,totalH=rows*cardH+(rows-1)*gapY;
+  const mx=(210-totalW)/2,my=(297-totalH)/2,perPage=cols*rows;
+  for(let i=0;i<S.students.length;i++){
+    const s=S.students[i];const pos=i%perPage;
+    if(i>0&&pos===0)doc.addPage('a4','portrait');
+    const col=pos%cols,row=Math.floor(pos/cols);
+    const x=mx+col*(cardW+gapX),y=my+row*(cardH+gapY);
+    updOv(`${i+1}/${S.students.length} — ${s.nama}`);
+    await renderCard(s,cv,side);
+    doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',x,y,cardW,cardH);
+    doc.setDrawColor(190);doc.setLineWidth(.1);doc.rect(x,y,cardW,cardH);
+  }
+  hideOv();
+  const totalPages=Math.ceil(S.students.length/perPage);
+  toast(`Siap cetak — ${S.students.length} kartu / ${totalPages} halaman A4 ✅`);
+  doc.autoPrint();
+  window.open(doc.output('bloburl'),'_blank');
+}
 async function qdl(id){const s=S.students.find(x=>x.id===id);if(!s)return;showOv('Membuat kartu...');const cv=document.getElementById('cv');await renderCard(s,cv,'front');const a=document.createElement('a');a.download=`kartu-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`;a.href=cv.toDataURL('image/png');a.click();hideOv();toast(`${s.nama} diunduh ✅`);}
 
 // ═══ SETTINGS ═══
