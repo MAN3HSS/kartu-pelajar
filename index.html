@@ -279,6 +279,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
         <div style="font-size:10px;color:var(--txt3);margin-top:4px;font-family:monospace" id="ppos"></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px">
+        <button class="btn bg" onclick="saveLayoutDB()">💾 Simpan Layout & Template</button>
         <button id="btnlock" class="btn bgold" onclick="toggleLock()">🔒 Kunci Layout</button>
         <div id="lockbadge" style="display:none;font-size:12px;color:var(--g700);background:var(--g100);padding:8px 12px;border-radius:8px;text-align:center;border:1px solid var(--g300)">✅ Layout terkunci</div>
         <button class="btn bg" onclick="goPage(2)">Lanjut →</button>
@@ -311,11 +312,26 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <button class="stab" id="me" onclick="setMode('excel')">📊 Import Excel</button>
         </div>
         <div id="ds">
-          <label class="uz gold" style="display:flex;align-items:center;gap:12px;text-align:left;padding:11px">
-            <input type="file" accept="image/*" onchange="pickPhoto(this)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
             <div id="pht"><div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div></div>
-            <div><div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div><div style="color:var(--txt3);font-size:11px">Dikompres otomatis</div></div>
+            <div style="flex:1">
+              <div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div>
+              <div style="color:var(--txt3);font-size:11px">Pilih Upload File atau Link URL di bawah</div>
+            </div>
+          </div>
+          <div class="stabs" style="margin-bottom:10px">
+            <button type="button" class="stab on" id="pmU" onclick="setPhotoMode('upload')">📁 Upload File</button>
+            <button type="button" class="stab" id="pmL" onclick="setPhotoMode('link')">🔗 Link URL</button>
+          </div>
+          <label class="uz gold" id="phUpload" style="display:flex;align-items:center;gap:12px;text-align:left;padding:11px">
+            <input type="file" accept="image/*" onchange="pickPhoto(this)">
+            <div class="uz-i">📁</div>
+            <div><div class="uz-l" style="color:var(--gold-dark)">Klik untuk pilih file foto</div><div class="uz-s">Dikompres otomatis</div></div>
           </label>
+          <div id="phLink" style="display:none">
+            <div class="fg"><label class="fl">Link/URL Foto</label><input class="fi" id="fphotolink" placeholder="https://contoh.com/foto.jpg" oninput="pickPhotoLink(this.value)"></div>
+            <div class="ibox" style="margin-bottom:12px"><div class="ibox-t">Catatan</div>Pastikan link gambar bisa diakses publik (bukan link privat Google Drive dsb). Foto tidak akan dikompres karena diambil langsung dari link.</div>
+          </div>
           <div class="fg"><label class="fl">Nama Lengkap *</label><input class="fi" id="fn" placeholder="ANZILIE RAHMA"></div>
           <div class="fg"><label class="fl">NIS/NISN *</label><input class="fi" id="fnis" placeholder="3083045603"></div>
           <div class="g2">
@@ -582,16 +598,35 @@ async function loadFromDB(){
   }catch(e){toast('Gagal memuat data: '+e.message,'err');}
 }
 
+async function loadSettingsDB(){
+  if(!SB)return;
+  try{
+    const{data,error}=await SB.from('app_settings').select('*').eq('id',1).maybeSingle();
+    if(error)throw error;
+    if(data&&data.data){
+      const{ttdImg,layout,tmplFront,tmplBack,...rest}=data.data;
+      Object.assign(S.settings,rest);
+      if(ttdImg)S.ttdImg=ttdImg;
+      if(layout)S.layout=Object.assign(JSON.parse(JSON.stringify(IL)),layout);
+      if(tmplFront){S.tmplFront=tmplFront;const lf=document.getElementById('lbl-f');if(lf)lf.textContent='✅ Depan terupload';const pf=document.getElementById('pvf');if(pf)pf.innerHTML=`<img src="${tmplFront}" style="width:100%;height:100%;object-fit:fill">`;const ei=document.getElementById('edimg');if(ei){ei.src=tmplFront;ei.style.display='block';}const eb=document.getElementById('edbg');if(eb)eb.style.display='none';}
+      if(tmplBack){S.tmplBack=tmplBack;const lb=document.getElementById('lbl-b');if(lb)lb.textContent='✅ Belakang terupload';const pb=document.getElementById('pvb');if(pb)pb.innerHTML=`<img src="${tmplBack}" style="width:100%;height:100%;object-fit:fill">`;}
+      if(S.settings.logoSekolah){const tw=document.getElementById('logo-tw');if(tw)tw.innerHTML=`<img src="${S.settings.logoSekolah}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid var(--border)">`;const lbl=document.getElementById('logo-lbl');if(lbl)lbl.textContent='✅ Logo terupload';}
+      if(S.ttdImg){const lbl=document.getElementById('ttdlbl');if(lbl)lbl.textContent='✅ Tanda tangan terupload';const pw=document.getElementById('ttdpw');if(pw)pw.style.display='block';const pi=document.getElementById('ttdpi');if(pi)pi.src=S.ttdImg;}
+      syncSUI();renderChips();
+    }
+  }catch(e){toast('Gagal memuat pengaturan tersimpan: '+e.message,'err');}
+}
+
 async function uploadFotoSB(base64,nama){
-  if(!SB||!base64)return null;
+  if(!SB||!base64)return{url:null,error:null};
   try{
     const blob=await fetch(base64).then(r=>r.blob());
     const fn=`${Date.now()}-${nama.replace(/\s+/g,'-').toLowerCase()}.jpg`;
     const{error}=await SB.storage.from('foto-siswa').upload(fn,blob,{contentType:'image/jpeg',upsert:true});
-    if(error)return null;
+    if(error)return{url:null,error};
     const{data}=SB.storage.from('foto-siswa').getPublicUrl(fn);
-    return data.publicUrl;
-  }catch(e){return null;}
+    return{url:data.publicUrl,error:null};
+  }catch(e){return{url:null,error:e};}
 }
 
 // ═══ LOGIN ═══
@@ -603,7 +638,7 @@ function doLogin(){
     document.getElementById('app').style.display='block';
     document.getElementById('sbun').textContent=u;
     initSB();syncSUI();initEditor();renderChips();
-    if(SB){updDBStatus(true);loadFromDB();}
+    if(SB){updDBStatus(true);loadFromDB();loadSettingsDB();}
   }else{
     const e=document.getElementById('lerr');e.style.display='block';
     document.getElementById('lp').value='';
@@ -617,7 +652,7 @@ if(sessionStorage.getItem('kp_ok')){
   document.getElementById('app').style.display='block';
   setTimeout(()=>{
     initSB();syncSUI();initEditor();renderChips();
-    if(SB){updDBStatus(true);loadFromDB();}
+    if(SB){updDBStatus(true);loadFromDB();loadSettingsDB();}
   },100);
 }
 
@@ -663,6 +698,19 @@ function hideOv(){document.getElementById('overlay').classList.remove('on');}
 function copySql(){
   const sql=`create table if not exists siswa (id uuid default gen_random_uuid() primary key,nama text not null,nis_nisn text,jenis_kelamin text,ttl text,alamat text,gol_darah text,no_hp text,no_rfid text,berlaku_sampai text,photo_url text,created_at timestamptz default now());\n\ncreate table if not exists app_settings (id int8 primary key default 1,data jsonb default '{}',updated_at timestamptz default now());`;
   navigator.clipboard.writeText(sql).then(()=>toast('SQL berhasil dicopy ✅')).catch(()=>toast('Gagal copy','err'));
+}
+
+async function saveLayoutDB(){
+  if(!SB){toast('Supabase belum terhubung, cek pengaturan koneksi','err');return;}
+  showOv('Menyimpan layout & template...');
+  try{
+    const{data:existing}=await SB.from('app_settings').select('data').eq('id',1).maybeSingle();
+    const merged={...(existing?.data||{}),layout:S.layout,tmplFront:S.tmplFront,tmplBack:S.tmplBack};
+    const{error}=await SB.from('app_settings').upsert({id:1,data:merged,updated_at:new Date()});
+    if(error)throw error;
+    toast('Layout & template berhasil disimpan ✅');
+  }catch(e){toast('Gagal simpan: '+e.message,'err');}
+  hideOv();
 }
 
 // ═══ TEMPLATE ═══
@@ -726,6 +774,19 @@ document.addEventListener('mousemove',e=>{
 document.addEventListener('mouseup',()=>{S.drag=null;S.resize=null;});
 
 // ═══ DATA SISWA ═══
+function setPhotoMode(m){
+  document.getElementById('phUpload').style.display=m==='upload'?'flex':'none';
+  document.getElementById('phLink').style.display=m==='link'?'block':'none';
+  document.getElementById('pmU').classList.toggle('on',m==='upload');
+  document.getElementById('pmL').classList.toggle('on',m==='link');
+}
+function pickPhotoLink(url){
+  url=url.trim();
+  if(!url){S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';return;}
+  S.curPhoto=url;
+  document.getElementById('pht').innerHTML=`<img src="${url}" onerror="this.parentElement.innerHTML='⚠️';document.getElementById('phl').textContent='⚠️ Link tidak valid/tidak bisa dimuat';" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
+  document.getElementById('phl').textContent='✅ Link foto terpasang';
+}
 async function pickPhoto(inp){const f=inp.files[0];if(!f)return;S.curPhoto=await compress(f);document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Foto terupload';}
 
 async function saveSiswa(){
@@ -740,14 +801,26 @@ async function saveSiswa(){
 
   if(SB){
     showOv('Menyimpan data...');
-    // Upload foto ke Storage jika ada dan masih base64
-    let photoUrl=s.photo&&s.photo.startsWith('data:')?await uploadFotoSB(s.photo,s.nama):s.photo;
+    // Upload foto ke Storage jika ada dan masih base64 — kalau gagal, JANGAN timpa foto lama dengan kosong
+    let photoUrl=s.photo,uploadFailed=false,uploadErrMsg='';
+    if(s.photo&&s.photo.startsWith('data:')){
+      const up=await uploadFotoSB(s.photo,s.nama);
+      if(up.error){
+        uploadFailed=true;
+        uploadErrMsg=up.error.message||'Bucket Storage "foto-siswa" belum dibuat / tidak bisa diakses';
+        const old=eid?S.students.find(x=>x.id===eid):null;
+        photoUrl=old?old.photo:null;
+      }else{
+        photoUrl=up.url;
+      }
+    }
     const rec={nama:s.nama,nis_nisn:s.nisNisn,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai,photo_url:photoUrl};
     let error;
     if(eid){({error}=await SB.from('siswa').update(rec).eq('id',eid));}
     else{({error}=await SB.from('siswa').insert(rec));}
     hideOv();
     if(error){toast('Gagal simpan: '+error.message,'err');return;}
+    if(uploadFailed)toast('⚠️ Data tersimpan, TAPI foto gagal diupload: '+uploadErrMsg,'err');
     await loadFromDB();
   }else{
     if(eid){const i=S.students.findIndex(x=>x.id===eid);if(i>-1)S.students[i]=s;}
@@ -759,9 +832,13 @@ async function saveSiswa(){
   toast(eid?`Data ${s.nama} diperbarui ✅`:`${s.nama} ditambahkan ✅`);
 }
 
-function resetForm(){['fn','fnis','fttl','fal','fhp','frfid','fbrl','fid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';document.getElementById('btnsave').textContent='+ Simpan';}
+function resetForm(){['fn','fnis','fttl','fal','fhp','frfid','fbrl','fid','fphotolink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';setPhotoMode('upload');document.getElementById('btnsave').textContent='+ Simpan';}
 
-function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('frfid').value=s.noRfid||'';document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
+function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('frfid').value=s.noRfid||'';document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;
+  const isLink=!!s.photo&&!s.photo.startsWith('data:')&&!s.photo.includes('supabase.co/storage');
+  if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}
+  setPhotoMode(isLink?'link':'upload');if(isLink)document.getElementById('fphotolink').value=s.photo;
+  document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
 
 async function hapusSiswa(id){
   const s=S.students.find(x=>x.id===id);if(!confirm(`Hapus ${s?.nama||'ini'}?`))return;
@@ -929,8 +1006,12 @@ async function saveSettings(){
   ss.quality=parseFloat(document.getElementById('sq')?.value||80)/100;ss.maxW=parseInt(gv('smw'))||400;ss.maxH=parseInt(gv('smh'))||500;
   const nu=gv('su').trim(),np=gv('sp'),np2=gv('sp2');
   if(nu||np){if(np!==np2){toast('Konfirmasi password tidak cocok!','err');return;}if(nu)CREDS.user=nu;if(np)CREDS.pass=np;localStorage.setItem('kp_creds',JSON.stringify(CREDS));document.getElementById('su').value='';document.getElementById('sp').value='';document.getElementById('sp2').value='';document.getElementById('sbun').textContent=CREDS.user;}
-  // Simpan settings ke Supabase jika terhubung
-  if(SB){await SB.from('app_settings').upsert({id:1,data:ss,updated_at:new Date()});}
+  // Simpan settings ke Supabase jika terhubung (digabung dengan layout/template yang sudah ada, tidak menimpa)
+  if(SB){
+    const{data:existing}=await SB.from('app_settings').select('data').eq('id',1).maybeSingle();
+    const merged={...(existing?.data||{}),...ss,ttdImg:S.ttdImg};
+    await SB.from('app_settings').upsert({id:1,data:merged,updated_at:new Date()});
+  }
   applySchoolInfo();updSPrev();renderChips();
   toast('Pengaturan disimpan ✅');
 }
