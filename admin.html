@@ -652,6 +652,9 @@ function doLogin(){
 }
 function doLogout(){sessionStorage.removeItem('kp_ok');document.getElementById('app').style.display='none';document.getElementById('login-page').style.display='flex';document.getElementById('lp').value='';}
 function togglePass(){const i=document.getElementById('lp');i.type=i.type==='password'?'text':'password';}
+// Muat identitas sekolah (nama, logo) SEBELUM login, supaya sudah tampil di halaman login
+initSB();
+if(SB)loadSettingsDB();
 if(sessionStorage.getItem('kp_ok')){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='block';
