@@ -197,13 +197,13 @@ async function renderCard(student,canvas,side,ctxData){
   if(tmpl){try{const img=await loadImg(tmpl);ctx.drawImage(img,0,0,CW,CH);}catch(e){ctx.fillStyle=side==='front'?'#d4f0df':'#e3f2fd';ctx.fillRect(0,0,CW,CH);}}
   else{ctx.fillStyle=side==='front'?'#d4f0df':'#e3f2fd';ctx.fillRect(0,0,CW,CH);}
   if(side==='back')return;
-  if(student.photo){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
-  const qrURL=await getQR(student,ss);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
-  if(student.noRfid){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
-  if(ttdImg){try{const p=L.ttdImg;const img=await loadImg(ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
-  const dt=(id,text)=>{const p=L[id];if(!p||!p.fs)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
+  if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
+  if(!L.qrCode.hidden){const qrURL=await getQR(student,ss);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
+  if(student.noRfid&&!L.barcodeRfid.hidden){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
+  if(ttdImg&&!L.ttdImg.hidden){try{const p=L.ttdImg;const img=await loadImg(ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
+  const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
   dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`T.T.L             : ${student.ttl}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
-  const pb=L.berlakuSampai;if(pb&&pb.fs){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
+  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
 }
 
 async function loadSettings(){
