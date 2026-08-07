@@ -136,6 +136,13 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 .ibox.ok{background:var(--g100);border-color:var(--g500)}.ibox.ok .ibox-t{color:var(--g700)}
 .ibox.err{background:#ffebee;border-color:var(--red)}.ibox.err .ibox-t{color:var(--red)}
 #editor{position:relative;overflow:hidden;border-radius:var(--rl);box-shadow:var(--shadow-lg);user-select:none;flex-shrink:0;border:2px solid var(--border)}
+#gridOverlay{position:absolute;inset:0;pointer-events:none;display:none}
+#gridOverlay.on{display:block}
+#gridOverlay .gline{position:absolute;background:rgba(255,0,150,.28)}
+#gridOverlay .gline.v{top:0;bottom:0;width:1px}
+#gridOverlay .gline.h{left:0;right:0;height:1px}
+#gridOverlay .gline.mid{background:rgba(255,0,150,.7);width:1.5px}
+#gridOverlay .gline.h.mid{height:1.5px}
 .chip{position:absolute;width:14px;height:14px;border-radius:50%;padding:0;font-size:0;overflow:hidden;color:#fff;cursor:grab;box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:10;transform:translate(-50%,-50%);user-select:none;border:2px solid rgba(255,255,255,.75);transition:all .15s ease}
 .chip:hover{z-index:25;transform:translate(-50%,-50%) scale(1.35)}
 .chip.on{width:auto;height:auto;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;white-space:nowrap;border-color:#fff;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.4);transform:translate(0,-110%)}
@@ -291,11 +298,13 @@ input[type=range]{width:100%;accent-color:var(--g600)}
     <div class="f1">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <span class="badge bg2" id="ebadge" style="font-size:12px;padding:5px 12px">✏️ Mode Edit</span>
-        <span style="font-size:12px;color:var(--txt3)" id="ehint">💡 Drag chip untuk memindahkan. Klik untuk edit properti.</span>
+        <span style="font-size:12px;color:var(--txt3)" id="ehint">💡 Drag chip untuk memindahkan. Klik untuk edit properti. Panah keyboard geser presisi.</span>
+        <button class="btn bgy bsm" id="btngrid" onclick="toggleGrid()" style="margin-left:auto;padding:6px 12px">📐 Tampilkan Grid</button>
       </div>
       <div id="editor">
         <div id="edbg" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:13px;background:var(--g50)">Upload template di Tab 1</div>
         <img id="edimg" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none" draggable="false">
+        <div id="gridOverlay"></div>
         <div id="chips"></div>
       </div>
       <p style="color:var(--txt3);font-size:12px;margin-top:8px">🟢 Data siswa &nbsp;|&nbsp; 🔵 Info sekolah &nbsp;|&nbsp; ◇ sudut = resize</p>
@@ -780,6 +789,38 @@ function selField(id){
   document.getElementById('ppos').textContent=`X:${L.x.toFixed(1)}% Y:${L.y.toFixed(1)}%`;renderChips();
 }
 function updProp(k,v){if(!S.sel||S.locked)return;const L=S.layout[S.sel];if(k==='fs')L.fs=parseInt(v)||10;else if(k==='col')L.col=v;else if(k==='bold')L.bold=v;else if(k==='w')L.w=parseFloat(v)||5;else if(k==='h')L.h=parseFloat(v)||5;renderChips();}
+function toggleGrid(){
+  S.showGrid=!S.showGrid;
+  document.getElementById('btngrid').className='btn bsm '+(S.showGrid?'bg':'bgy');
+  document.getElementById('btngrid').textContent=S.showGrid?'📐 Sembunyikan Grid':'📐 Tampilkan Grid';
+  buildGrid();
+}
+function buildGrid(){
+  const go=document.getElementById('gridOverlay');
+  go.classList.toggle('on',!!S.showGrid);
+  if(!S.showGrid){go.innerHTML='';return;}
+  go.innerHTML='';
+  for(let i=10;i<100;i+=10){
+    const v=document.createElement('div');v.className='gline v'+(i===50?' mid':'');v.style.left=i+'%';go.appendChild(v);
+    const h=document.createElement('div');h.className='gline h'+(i===50?' mid':'');h.style.top=i+'%';go.appendChild(h);
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(!S.sel||S.locked)return;
+  if(!document.getElementById('p1').classList.contains('on'))return;
+  const tag=(document.activeElement.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea')return;
+  const arrows={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  if(!arrows[e.key])return;
+  e.preventDefault();
+  const step=e.shiftKey?1:(e.altKey?0.05:0.2);
+  const[dx,dy]=arrows[e.key];
+  const L=S.layout[S.sel];
+  L.x=Math.max(0,Math.min(95,L.x+dx*step));
+  L.y=Math.max(0,Math.min(96,L.y+dy*step));
+  renderChips();
+  const pp=document.getElementById('ppos');if(pp)pp.textContent=`X:${L.x.toFixed(1)}% Y:${L.y.toFixed(1)}%`;
+});
 function toggleLock(){S.locked=!S.locked;document.getElementById('btnlock').textContent=S.locked?'🔓 Buka Kunci':'🔒 Kunci Layout';document.getElementById('ebadge').textContent=S.locked?'🔒 Terkunci':'✏️ Mode Edit';document.getElementById('ebadge').style.background=S.locked?'#fff3e0':'var(--g100)';document.getElementById('ebadge').style.color=S.locked?'var(--orange)':'var(--g800)';document.getElementById('ehint').textContent=S.locked?'Terkunci. Klik "Buka Kunci" untuk edit.':'💡 Drag chip untuk pindah. Klik untuk edit properti.';document.getElementById('lockbadge').style.display=S.locked?'block':'none';if(S.sel)selField(S.sel);renderChips();toast(S.locked?'Layout dikunci 🔒':'Layout dibuka 🔓',S.locked?'warn':'ok');}
 function renderChips(){
   buildLists();const chips=document.getElementById('chips');chips.innerHTML='';const L=S.layout,sc=DW/CW;
