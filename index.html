@@ -96,8 +96,8 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
 <div id="portal">
   <div class="pcard">
     <div class="pbrand">
-      <div class="pemblem">🕌</div>
-      <div class="pinst">MAN 3 Hulu Sungai Selatan</div>
+      <div class="pemblem" id="pemblem">🕌</div>
+      <div class="pinst" id="pinst">MAN 3 Hulu Sungai Selatan</div>
       <div class="ptitle">Portal Kartu Pelajar Digital</div>
       <div class="psub">Cek dan lihat kartu pelajar digital kamu</div>
     </div>
@@ -224,7 +224,7 @@ async function loadSettings(){
 async function renderBothSides(){
   document.getElementById('cardLoading').style.display='flex';
   document.getElementById('cardImg').style.display='none';
-  const ctxData=await loadSettings();
+  const ctxData=window._brandCtx||await loadSettings();
   const cv=document.getElementById('cardCanvas');
   await renderCard(current,cv,'front',ctxData);
   cardURLs.front=cv.toDataURL('image/png');
@@ -357,6 +357,20 @@ function toast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');
   clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('on'),2600);
 }
+
+// Muat identitas sekolah (logo, nama) begitu halaman dibuka, sebelum siswa cari data apapun
+(async function initBranding(){
+  try{
+    const ctxData=await loadSettings();
+    const ss=ctxData.settings;
+    if(ss.singkatan)document.getElementById('pinst').textContent=ss.singkatan;
+    window._brandCtx=ctxData; // dipakai ulang saat render kartu, biar tidak fetch 2x
+    if(ss.logoSekolah){
+      document.getElementById('pemblem').innerHTML=`<img src="${ss.logoSekolah}" style="width:100%;height:100%;object-fit:contain;border-radius:50%">`;
+    }
+  }catch(e){/* biarkan ikon default kalau gagal memuat */}
+})();
+
 </script>
 
 <div id="qrw" style="position:absolute;left:-9999px;top:-9999px"></div>
