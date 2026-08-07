@@ -103,9 +103,9 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
     </div>
     <div class="err-msg" id="errmsg">Data tidak ditemukan. Pastikan NIS/NISN dan tanggal lahir sudah benar, atau hubungi TU sekolah.</div>
     <div class="fg"><label class="fl">NIS / NISN</label><input class="fi" id="cnis" placeholder="Contoh: 3083045603"></div>
-    <div class="fg"><label class="fl">Tanggal Lahir</label><input class="fi" id="cttl" type="text" placeholder="Contoh: 10-08-2008"></div>
+    <div class="fg"><label class="fl">Tanggal Lahir</label><input class="fi" id="cttl" type="date"></div>
     <button class="btn-primary" onclick="cariSiswa()">🔍 Cari Kartu Saya</button>
-    <div class="demo-hint">Masukkan NIS/NISN dan tanggal lahir sesuai yang terdaftar di sekolah. Kalau data belum muncul, mungkin admin belum menginput data kamu — hubungi TU sekolah.</div>
+    <div class="demo-hint">Masukkan NIS/NISN, lalu pilih tanggal lahir lewat kalender sesuai yang terdaftar di sekolah. Kalau data belum muncul, mungkin admin belum menginput data kamu — hubungi TU sekolah.</div>
   </div>
 </div>
 
@@ -134,7 +134,7 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
           <div class="irow"><span>Nama Lengkap</span><span id="dnama">—</span></div>
           <div class="irow"><span>NIS/NISN</span><span id="dnis">—</span></div>
           <div class="irow"><span>Kelas</span><span id="dkelas">—</span></div>
-          <div class="irow"><span>TTL</span><span id="dttl">—</span></div>
+          <div class="irow"><span>Tempat, Tanggal Lahir</span><span id="dttl">—</span></div>
           <div class="irow"><span>Gol. Darah</span><span id="dgol">—</span></div>
           <div class="irow"><span>No. HP/WA</span><span id="dhp">—</span></div>
           <div class="irow"><span>Alamat</span><span id="dalamat">—</span></div>
@@ -176,8 +176,8 @@ let current=null,cardSide='front',cardURLs={front:null,back:null};
 const CW=1011,CH=638;
 const IL={
   photo:{x:3.5,y:22,w:22,h:55},nama:{x:29,y:27,fs:22,bold:true,col:'#1a5c2a'},
-  nisNisn:{x:29,y:36,fs:12,bold:false,col:'#333'},kelas:{x:29,y:44,fs:12,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:52,fs:12,bold:false,col:'#333'},
-  ttl:{x:29,y:60,fs:10,bold:false,col:'#333'},alamat:{x:29,y:68,fs:9,bold:false,col:'#333'},
+  nisNisn:{x:29,y:34,fs:11,bold:false,col:'#333'},kelas:{x:29,y:41,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:48,fs:11,bold:false,col:'#333'},
+  ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333'},
   golDarah:{x:29,y:76,fs:11,bold:false,col:'#333'},noHp:{x:29,y:84,fs:10,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
   barcodeRfid:{x:3,y:3,w:32,h:15},
@@ -187,6 +187,7 @@ const IL={
 const DEFAULT_SETTINGS={namaKepala:'MUHAMMAD TAUFIK',nip:'NIP. 197xxxxxx',labelKepala:'Kepala Madrasah',kota:'Hulu Sungai Selatan',logoSekolah:null,namaInstansi:'KEMENTERIAN AGAMA REPUBLIK INDONESIA',namaSekolah:'Madrasah Aliyah Negeri 3 Hulu Sungai Selatan',singkatan:'MAN 3 HSS'};
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;i.src=src;});
 function fmtDate(kota){const d=new Date();const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return`${kota}, ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;}
+function fmtTglLahir(iso){if(!iso)return'';const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];const[y,mo,d]=iso.split('-');if(!y||!mo||!d)return iso;return`${+d} ${m[+mo-1]} ${y}`;}
 function getQR(s,ss){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${ss.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 function getBarcode(s){if(!s.noRfid)return Promise.resolve(null);try{const cv=document.createElement('canvas');JsBarcode(cv,s.noRfid,{format:'CODE128',displayValue:true,fontSize:16,margin:4,height:40});return Promise.resolve(cv.toDataURL('image/png'));}catch(e){return Promise.resolve(null);}}
 
@@ -202,7 +203,7 @@ async function renderCard(student,canvas,side,ctxData){
   if(student.noRfid&&!L.barcodeRfid.hidden){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(ttdImg&&!L.ttdImg.hidden){try{const p=L.ttdImg;const img=await loadImg(ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
-  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`T.T.L             : ${student.ttl}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
+  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`Tempat Lahir   : ${student.ttl}`);dt('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
   const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
 }
 
@@ -282,7 +283,7 @@ async function cariSiswa(){
     err.style.display='none';
     current={
       id:found.id,nama:found.nama,nisNisn:found.nis_nisn,kelas:found.kelas||'',
-      jenisKelamin:found.jenis_kelamin||'',ttl:found.ttl||'',alamat:found.alamat||'',
+      jenisKelamin:found.jenis_kelamin||'',ttl:found.ttl||'',tanggalLahir:found.tanggal_lahir||'',alamat:found.alamat||'',
       golDarah:found.gol_darah||'-',noHp:found.no_hp||'',noRfid:found.no_rfid||'',
       berlakuSampai:found.berlaku_sampai||'',photo:found.photo_url||''
     };
@@ -304,7 +305,7 @@ function tampilkanDataPanel(){
   document.getElementById('dnama').textContent=s.nama;
   document.getElementById('dnis').textContent=s.nisNisn;
   document.getElementById('dkelas').textContent=s.kelas||'-';
-  document.getElementById('dttl').textContent=s.ttl||'-';
+  document.getElementById('dttl').textContent=[s.ttl,fmtTglLahir(s.tanggalLahir)].filter(Boolean).join(', ')||'-';
   document.getElementById('dgol').textContent=s.golDarah;
   document.getElementById('dhp').textContent=s.noHp||'-';
   document.getElementById('dalamat').textContent=s.alamat;
