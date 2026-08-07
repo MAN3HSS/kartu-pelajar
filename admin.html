@@ -362,8 +362,8 @@ input[type=range]{width:100%;accent-color:var(--g600)}
             <div class="fg"><label class="fl">Jenis Kelamin</label><select class="fi" id="fjk"><option>Laki-laki</option><option>Perempuan</option></select></div>
             <div class="fg"><label class="fl">Gol. Darah</label><select class="fi" id="fgol"><option>A</option><option>B</option><option>AB</option><option>O</option><option>Tidak Diketahui</option></select></div>
           </div>
-          <div class="fg"><label class="fl">Tempat, Tanggal Lahir</label><input class="fi" id="fttl" placeholder="HSS, 10-08-2008"></div>
-          <div class="fg"><label class="fl">Tanggal Lahir <span style="font-weight:400;color:var(--txt3)">(dipakai siswa login ke Portal, wajib diisi akurat)</span></label><input class="fi" id="ftgllahir" type="date"></div>
+          <div class="fg"><label class="fl">Tempat Lahir</label><input class="fi" id="fttl" placeholder="Hulu Sungai Selatan"></div>
+          <div class="fg"><label class="fl">Tanggal Lahir <span style="font-weight:400;color:var(--txt3)">(ikut tercetak di kartu & dipakai login Portal)</span></label><input class="fi" id="ftgllahir" type="date"></div>
           <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="fal" placeholder="Jl. ..." rows="2"></textarea></div>
           <div class="fg"><label class="fl">No. HP/WA Orang Tua</label><input class="fi" id="fhp" placeholder="08xxxxxxxxxx"></div>
           <div class="fg"><label class="fl">No. Kartu RFID <span style="font-weight:400;color:var(--txt3)">(opsional — barcode otomatis dibuat)</span></label><input class="fi" id="frfid" placeholder="0004512389"></div>
@@ -378,7 +378,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
             <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
             <div class="uz-s">.xlsx / .xls / .csv</div></label>
-          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | TTL | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
+          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | Tempat Lahir | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
           <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
         </div>
       </div>
@@ -545,7 +545,8 @@ const FIELDS=[
   {id:'nisNisn',      label:'NIS/NISN',       type:'text',grp:'siswa', clr:'#e65100',pre:'NIS/NISN      : '},
   {id:'kelas',        label:'Kelas',          type:'text',grp:'siswa', clr:'#00838f',pre:'Kelas             : '},
   {id:'jenisKelamin', label:'Jenis Kelamin',  type:'text',grp:'siswa', clr:'#6a1b9a',pre:'Jenis Kelamin : '},
-  {id:'ttl',          label:'T.T.L',          type:'text',grp:'siswa', clr:'#b71c1c',pre:'T.T.L             : '},
+  {id:'ttl',          label:'Tempat Lahir',   type:'text',grp:'siswa', clr:'#b71c1c',pre:'Tempat Lahir   : '},
+  {id:'tanggalLahir', label:'Tanggal Lahir',  type:'text',grp:'siswa', clr:'#d84315',pre:'Tanggal Lahir  : '},
   {id:'alamat',       label:'Alamat',         type:'text',grp:'siswa', clr:'#4e342e',pre:'Alamat          : '},
   {id:'golDarah',     label:'Gol. Darah',     type:'text',grp:'siswa', clr:'#880e4f',pre:'Gol. Darah    : '},
   {id:'noHp',         label:'No. HP/WA',      type:'text',grp:'siswa', clr:'#37474f',pre:'No. HP/WA    : '},
@@ -560,8 +561,8 @@ const FIELDS=[
 ];
 const IL={
   photo:{x:3.5,y:22,w:22,h:55},nama:{x:29,y:27,fs:22,bold:true,col:'#1a5c2a'},
-  nisNisn:{x:29,y:36,fs:12,bold:false,col:'#333'},kelas:{x:29,y:44,fs:12,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:52,fs:12,bold:false,col:'#333'},
-  ttl:{x:29,y:60,fs:10,bold:false,col:'#333'},alamat:{x:29,y:68,fs:9,bold:false,col:'#333'},
+  nisNisn:{x:29,y:34,fs:11,bold:false,col:'#333'},kelas:{x:29,y:41,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:48,fs:11,bold:false,col:'#333'},
+  ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333'},
   golDarah:{x:29,y:76,fs:11,bold:false,col:'#333'},noHp:{x:29,y:84,fs:10,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
   barcodeRfid:{x:3,y:3,w:32,h:15},
@@ -706,6 +707,7 @@ const gv=id=>(document.getElementById(id)||{}).value||'';
 const readF=f=>new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(f);});
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
 function fmtDate(){const d=new Date();const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return`${S.settings.kota}, ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;}
+function fmtTglLahir(iso){if(!iso)return'';const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];const[y,mo,d]=iso.split('-');if(!y||!mo||!d)return iso;return`${+d} ${m[+mo-1]} ${y}`;}
 function toast(msg,type='ok'){
   const t=document.createElement('div');t.className='toast';
   t.style.borderLeftColor=type==='err'?'#ef5350':type==='warn'?'#ff9800':'var(--gold)';
@@ -980,7 +982,7 @@ async function importXL(inp){
   if(rows.length<2){toast('File kosong atau format salah','err');return;}
   const h=rows[0].map(x=>(x||'').toString().toLowerCase());
   const fc=(...ns)=>{for(const n of ns){const i=h.findIndex(x=>x.includes(n));if(i>-1)return i;}return -1;};
-  const cols={nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir tempat'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid'),photoLink:fc('link foto','foto url','link photo','photo')};
+  const cols={nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('tempat lahir','tempat','ttl'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid'),photoLink:fc('link foto','foto url','link photo','photo')};
   const newStudents=[];
   for(let i=1;i<rows.length;i++){
     const row=rows[i];const g=c=>c>-1?(row[c]||'').toString().trim():'';
@@ -1002,7 +1004,7 @@ async function importXL(inp){
   toast(`${newStudents.length} siswa berhasil diimport ✅`);
 }
 
-function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','TTL','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','HSS, 10-08-2008','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
+function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','Tempat Lahir','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','Hulu Sungai Selatan','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
 async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${S.settings.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
@@ -1027,7 +1029,7 @@ async function renderCard(student,canvas,side){
   if(S.ttdImg&&!L.ttdImg.hidden){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
   const ss=S.settings;
-  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`T.T.L             : ${student.ttl}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
+  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`Tempat Lahir   : ${student.ttl}`);dt('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
   const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
 }
 
@@ -1043,7 +1045,7 @@ function buildPrevHTML(student,w,h,side){
     const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col}">${text}</div>`;};
     const ss=S.settings;
-    html+=tx('nama',student.nama);html+=tx('nisNisn',`NIS/NISN      : ${student.nisNisn}`);html+=tx('kelas',`Kelas             : ${student.kelas||''}`);html+=tx('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);html+=tx('ttl',`T.T.L             : ${student.ttl}`);html+=tx('alamat',`Alamat          : ${student.alamat}`);html+=tx('golDarah',`Gol. Darah    : ${student.golDarah}`);html+=tx('noHp',`No. HP/WA    : ${student.noHp}`);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
+    html+=tx('nama',student.nama);html+=tx('nisNisn',`NIS/NISN      : ${student.nisNisn}`);html+=tx('kelas',`Kelas             : ${student.kelas||''}`);html+=tx('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);html+=tx('ttl',`Tempat Lahir   : ${student.ttl}`);html+=tx('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);html+=tx('alamat',`Alamat          : ${student.alamat}`);html+=tx('golDarah',`Gol. Darah    : ${student.golDarah}`);html+=tx('noHp',`No. HP/WA    : ${student.noHp}`);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
     const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y}%;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y+5}%;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
   }
   html+='</div>';return html;
