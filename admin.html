@@ -372,7 +372,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
             <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
             <div class="uz-s">.xlsx / .xls / .csv</div></label>
-          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | TTL | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai</div>
+          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | TTL | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
           <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
         </div>
       </div>
@@ -969,16 +969,16 @@ async function importXL(inp){
   if(rows.length<2){toast('File kosong atau format salah','err');return;}
   const h=rows[0].map(x=>(x||'').toString().toLowerCase());
   const fc=(...ns)=>{for(const n of ns){const i=h.findIndex(x=>x.includes(n));if(i>-1)return i;}return -1;};
-  const cols={nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir tempat'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid')};
+  const cols={nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('ttl','lahir tempat'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid'),photoLink:fc('link foto','foto url','link photo','photo')};
   const newStudents=[];
   for(let i=1;i<rows.length;i++){
     const row=rows[i];const g=c=>c>-1?(row[c]||'').toString().trim():'';
     if(!g(cols.nama))continue;
-    newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),kelas:g(cols.kelas),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),tanggalLahir:g(cols.tanggalLahir),alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),noRfid:g(cols.noRfid),berlakuSampai:g(cols.berlakuSampai),photo:null});
+    newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),kelas:g(cols.kelas),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),tanggalLahir:g(cols.tanggalLahir),alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),noRfid:g(cols.noRfid),berlakuSampai:g(cols.berlakuSampai),photo:g(cols.photoLink)||null});
   }
   if(SB){
     showOv(`Import ${newStudents.length} siswa ke database...`);
-    const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,kelas:s.kelas,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,tanggal_lahir:s.tanggalLahir||null,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai}));
+    const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,kelas:s.kelas,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,tanggal_lahir:s.tanggalLahir||null,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai,photo_url:s.photo||null}));
     const{error}=await SB.from('siswa').insert(recs);
     hideOv();
     if(error){toast('Gagal import: '+error.message,'err');return;}
@@ -991,7 +991,7 @@ async function importXL(inp){
   toast(`${newStudents.length} siswa berhasil diimport ✅`);
 }
 
-function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','TTL','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','HSS, 10-08-2008','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
+function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','TTL','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','HSS, 10-08-2008','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
 async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${S.settings.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
