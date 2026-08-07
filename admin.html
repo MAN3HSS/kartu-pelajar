@@ -153,6 +153,12 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 .pcard .pbg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
 .pcard .ptxt{position:absolute;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;line-height:1}
 #overlay{position:fixed;inset:0;background:rgba(13,77,37,.72);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:14px;backdrop-filter:blur(4px)}
+#photoModal{position:fixed;inset:0;background:rgba(13,30,20,.85);z-index:1100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);cursor:zoom-out;padding:30px}
+#photoModal.on{display:flex}
+#photoModal img{max-width:min(90vw,420px);max-height:85vh;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:4px solid #fff;cursor:default;object-fit:contain}
+#photoModal .pmclose{position:absolute;top:22px;right:26px;color:#fff;font-size:26px;cursor:pointer;background:rgba(255,255,255,.15);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+#photoModal .pmclose:hover{background:rgba(255,255,255,.28)}
+.tph{cursor:zoom-in}
 #overlay.on{display:flex}
 .spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -418,6 +424,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <button class="btn bg bsm" onclick="dlOnePNG('front')">🖼 PNG Depan</button>
           <button class="btn bg bsm" onclick="dlOnePNG('back')">🖼 PNG Belakang</button>
         </div>
+        <button class="btn bgold bl" style="margin-top:8px" onclick="dlOnePDFBoth()">📑 PDF Depan + Belakang (1 file, tersusun)</button>
       </div>
     </div>
     <div class="f1">
@@ -525,6 +532,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <canvas id="cv" style="display:none"></canvas>
 <div id="qrw" style="position:fixed;left:-9999px;top:0;visibility:hidden;width:128px;height:128px"></div>
 <div id="overlay"><div class="spinner"></div><div id="ovmsg" style="font-size:16px;font-weight:700"></div><div id="ovd" style="font-size:13px;opacity:.7"></div></div>
+<div id="photoModal" onclick="closePhotoModal()"><div class="pmclose" onclick="closePhotoModal()">✕</div><img id="pmimg" src="" onclick="event.stopPropagation()"></div>
 <div id="tw"></div>
 
 <script>
@@ -824,6 +832,7 @@ function buildGrid(){
   }
 }
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('photoModal').classList.contains('on')){closePhotoModal();return;}
   if(!S.sel||S.locked)return;
   if(!document.getElementById('p1').classList.contains('on'))return;
   const tag=(document.activeElement.tagName||'').toLowerCase();
@@ -942,6 +951,8 @@ async function hapusSiswa(id){
   toast('Data dihapus','warn');
 }
 
+function showPhotoModal(url){document.getElementById('pmimg').src=url;document.getElementById('photoModal').classList.add('on');}
+function closePhotoModal(){document.getElementById('photoModal').classList.remove('on');document.getElementById('pmimg').src='';}
 function renderList(){
   const q=(document.getElementById('cari')?.value||'').toLowerCase();
   const fil=S.students.filter(s=>s.nama.toLowerCase().includes(q)||s.nisNisn.toLowerCase().includes(q));
@@ -950,7 +961,7 @@ function renderList(){
   document.getElementById('nodata').style.display=S.students.length===0?'block':'none';
   fil.forEach((s,i)=>{
     const tr=document.createElement('tr');
-    const ph=s.photo?`<img src="${s.photo}" class="tph" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
+    const ph=s.photo?`<img src="${s.photo}" class="tph" onclick="showPhotoModal('${s.photo.replace(/'/g,"\\'")}')" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
     tr.innerHTML=`<td style="color:var(--txt3);font-size:11px">${i+1}</td><td>${ph}</td><td style="font-weight:600">${s.nama}</td><td style="font-family:monospace;font-size:12px">${s.nisNisn}</td><td>${s.jenisKelamin}</td><td>${s.photo?'<span style="color:var(--g600);font-weight:700">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
     <td style="white-space:nowrap">
       <button onclick="editSiswa('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--blue);border:1px solid #90caf9;padding:4px 9px;font-size:11px">✏</button>
@@ -1042,6 +1053,27 @@ function buildPrevHTML(student,w,h,side){
 function fillSel(){const sel=document.getElementById('sels');if(!sel)return;const cur=sel.value;sel.innerHTML='<option value="">— Pilih —</option>';S.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nama+(s.nisNisn?` (${s.nisNisn})`:'');sel.appendChild(o);});if(cur)sel.value=cur;}
 function setPrevSide(side){S.prevSide=side;document.getElementById('pbf').className='btn bsm '+(side==='front'?'bg':'bgy');document.getElementById('pbb').className='btn bsm '+(side==='back'?'bb':'bgy');refreshDL();}
 function refreshDL(){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):S.students[0];document.getElementById('dlprev').innerHTML=buildPrevHTML(s,DW,DH,S.prevSide);}
+async function dlOnePDFBoth(){
+  const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;
+  if(!s){toast('Pilih siswa dulu!','err');return;}
+  showOv('Membuat PDF depan + belakang...');
+  const cv=document.getElementById('cv');
+  const cardW=85.6,cardH=54,gap=8,pageW=cardW+20,pageH=cardH*2+gap+30;
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:[pageW,pageH]});
+  const x=(pageW-cardW)/2;
+  await renderCard(s,cv,'front');
+  doc.setFontSize(8);doc.setTextColor(90);doc.text('TAMPAK DEPAN',pageW/2,10,{align:'center'});
+  doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',x,14,cardW,cardH);
+  doc.setDrawColor(190);doc.setLineWidth(.1);doc.rect(x,14,cardW,cardH);
+  const y2=14+cardH+gap;
+  await renderCard(s,cv,'back');
+  doc.text('TAMPAK BELAKANG',pageW/2,y2-4,{align:'center'});
+  doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',x,y2,cardW,cardH);
+  doc.rect(x,y2,cardW,cardH);
+  doc.save(`kartu-depan-belakang-${s.nama.replace(/\s+/g,'-').toLowerCase()}.pdf`);
+  hideOv();toast(`PDF depan+belakang ${s.nama} diunduh ✅`);
+}
 async function dlOnePNG(side){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;if(!s){toast('Pilih siswa dulu!','err');return;}showOv('Membuat PNG...');const cv=document.getElementById('cv');await renderCard(s,cv,side);const a=document.createElement('a');a.download=`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`;a.href=cv.toDataURL('image/png');a.click();hideOv();toast(`${s.nama} diunduh ✅`);}
 async function dlOnePDF(side){const id=document.getElementById('sels')?.value;const s=id?S.students.find(x=>x.id===id):null;if(!s){toast('Pilih siswa dulu!','err');return;}showOv('Membuat PDF...');const cv=document.getElementById('cv');await renderCard(s,cv,side);const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[85.6,54]});doc.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,85.6,54);doc.save(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.pdf`);hideOv();toast(`PDF ${s.nama} diunduh ✅`);}
 async function dlAllPNG(side){if(!S.students.length){toast('Belum ada siswa!','err');return;}showOv(`Membuat ${S.students.length} kartu...`);const zip=new JSZip();const cv=document.getElementById('cv');for(let i=0;i<S.students.length;i++){const s=S.students[i];updOv(`${i+1}/${S.students.length} — ${s.nama}`);await renderCard(s,cv,side);zip.file(`kartu-${side}-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`,cv.toDataURL('image/png').split(',')[1],{base64:true});}const blob=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`kartu-${side}-semua.zip`;a.click();hideOv();toast(`ZIP ${S.students.length} kartu diunduh ✅`);}
