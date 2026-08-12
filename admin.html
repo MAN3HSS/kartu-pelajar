@@ -9,7 +9,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -552,7 +551,6 @@ const FIELDS=[
   {id:'noHp',         label:'No. HP/WA',      type:'text',grp:'siswa', clr:'#37474f',pre:'No. HP/WA    : '},
   {id:'berlakuSampai',label:'Berlaku Sampai', type:'exp', grp:'siswa', clr:'#0d4d25'},
   {id:'qrCode',       label:'QR Code',        type:'img', grp:'siswa', clr:'#212121'},
-  {id:'barcodeRfid',  label:'Barcode RFID',   type:'img', grp:'siswa', clr:'#5d4037'},
   {id:'tglCetak',     label:'Tgl. Cetak',     type:'text',grp:'sekolah',clr:'#01579b'},
   {id:'labelKepala',  label:'Label Kepala',   type:'text',grp:'sekolah',clr:'#01579b'},
   {id:'ttdImg',       label:'Tanda Tangan',   type:'img', grp:'sekolah',clr:'#01579b'},
@@ -565,7 +563,6 @@ const IL={
   ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333'},
   golDarah:{x:29,y:76,fs:11,bold:false,col:'#333'},noHp:{x:29,y:84,fs:10,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
-  barcodeRfid:{x:3,y:3,w:32,h:15},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
   ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
 };
@@ -1007,17 +1004,9 @@ async function importXL(inp){
 function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','Tempat Lahir','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','Hulu Sungai Selatan','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
-async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${S.settings.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
+async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 
 // ═══ RENDER KARTU ═══
-async function getBarcode(s){
-  if(!s.noRfid)return null;
-  try{
-    const bcv=document.createElement('canvas');
-    JsBarcode(bcv,s.noRfid,{format:'CODE128',displayValue:true,fontSize:16,margin:4,height:40});
-    return bcv.toDataURL('image/png');
-  }catch(e){return null;}
-}
 async function renderCard(student,canvas,side){
   canvas.width=CW;canvas.height=CH;const ctx=canvas.getContext('2d');ctx.textBaseline='top';const L=S.layout;
   const tmpl=side==='front'?S.tmplFront:S.tmplBack;
@@ -1025,7 +1014,6 @@ async function renderCard(student,canvas,side){
   if(side==='back')return;
   if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   if(!L.qrCode.hidden){const qrURL=await getQR(student);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
-  if(student.noRfid&&!L.barcodeRfid.hidden){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(S.ttdImg&&!L.ttdImg.hidden){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
   const ss=S.settings;
@@ -1041,7 +1029,6 @@ function buildPrevHTML(student,w,h,side){
   if(side==='front'){
     const pp=L.photo;if(student.photo&&!pp.hidden)html+=`<img src="${student.photo}" style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else if(!pp.hidden)html+=`<div style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
     const qp=L.qrCode;if(!qp.hidden)html+=`<div style="position:absolute;left:${qp.x}%;top:${qp.y}%;width:${qp.w}%;height:${qp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
-    if(student.noRfid&&!L.barcodeRfid.hidden){const bp=L.barcodeRfid;html+=`<div style="position:absolute;left:${bp.x}%;top:${bp.y}%;width:${bp.w}%;height:${bp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#666;border:1px solid #ddd">|‖|Barcode</div>`;}
     const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col}">${text}</div>`;};
     const ss=S.settings;
