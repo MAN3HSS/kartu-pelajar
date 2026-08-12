@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
 <style>
 :root{
   --g900:#0d4d25;--g800:#155f32;--g700:#1a7a3d;--g600:#1e8f47;--g500:#2da44e;--g100:#d4f0df;--g50:#edf9f2;
@@ -180,7 +179,6 @@ const IL={
   ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333'},
   golDarah:{x:29,y:76,fs:11,bold:false,col:'#333'},noHp:{x:29,y:84,fs:10,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
-  barcodeRfid:{x:3,y:3,w:32,h:15},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
   ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
 };
@@ -188,8 +186,7 @@ const DEFAULT_SETTINGS={namaKepala:'MUHAMMAD TAUFIK',nip:'NIP. 197xxxxxx',labelK
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;i.src=src;});
 function fmtDate(kota){const d=new Date();const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return`${kota}, ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;}
 function fmtTglLahir(iso){if(!iso)return'';const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];const[y,mo,d]=iso.split('-');if(!y||!mo||!d)return iso;return`${+d} ${m[+mo-1]} ${y}`;}
-function getQR(s,ss){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:`Nama:${s.nama}\nNIS:${s.nisNisn}\nSekolah:${ss.singkatan}\nBerlaku:${s.berlakuSampai}`,width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
-function getBarcode(s){if(!s.noRfid)return Promise.resolve(null);try{const cv=document.createElement('canvas');JsBarcode(cv,s.noRfid,{format:'CODE128',displayValue:true,fontSize:16,margin:4,height:40});return Promise.resolve(cv.toDataURL('image/png'));}catch(e){return Promise.resolve(null);}}
+function getQR(s,ss){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 
 async function renderCard(student,canvas,side,ctxData){
   const{layout:L,tmplFront,tmplBack,settings:ss,ttdImg}=ctxData;
@@ -200,7 +197,6 @@ async function renderCard(student,canvas,side,ctxData){
   if(side==='back')return;
   if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   if(!L.qrCode.hidden){const qrURL=await getQR(student,ss);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
-  if(student.noRfid&&!L.barcodeRfid.hidden){const bcURL=await getBarcode(student);if(bcURL){const p=L.barcodeRfid;const img=await loadImg(bcURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(ttdImg&&!L.ttdImg.hidden){try{const p=L.ttdImg;const img=await loadImg(ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
   dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`Tempat Lahir   : ${student.ttl}`);dt('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
