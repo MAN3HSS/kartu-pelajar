@@ -34,6 +34,12 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
 .pcard{background:var(--card);border-radius:22px;padding:42px 38px;width:100%;max-width:430px;box-shadow:0 24px 80px rgba(0,0,0,.3);position:relative;z-index:1}
 .pbrand{text-align:center;margin-bottom:28px}
 .pemblem{width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;border:3px solid var(--g100);background:var(--g50);font-size:32px}
+.dategroup{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px}
+.dategroup select{width:100%;padding:13px 8px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);font-size:13px;background:var(--g50)}
+.dategroup select:focus{outline:none;border-color:var(--g500);background:#fff}
+.stabs{display:flex;gap:5px}
+.stab{padding:7px 12px;border-radius:7px;font-size:11.5px;cursor:pointer;border:1.5px solid var(--border);color:var(--txt2);font-weight:600;font-family:var(--font);background:transparent}
+.stab.on{background:var(--g700);color:#fff;border-color:var(--g700)}
 .pinst{font-size:11px;font-weight:800;color:var(--g700);letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase}
 .ptitle{font-family:var(--font-h);font-size:22px;font-weight:700;color:var(--txt)}
 .psub{font-size:13px;color:var(--txt3);margin-top:6px}
@@ -102,7 +108,9 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
     </div>
     <div class="err-msg" id="errmsg">Data tidak ditemukan. Pastikan NIS/NISN dan tanggal lahir sudah benar, atau hubungi TU sekolah.</div>
     <div class="fg"><label class="fl">NIS / NISN</label><input class="fi" id="cnis" placeholder="Contoh: 3083045603"></div>
-    <div class="fg"><label class="fl">Tanggal Lahir</label><input class="fi" id="cttl" type="date"></div>
+    <div class="fg"><label class="fl">Tanggal Lahir</label>
+      <div class="dategroup"><select id="lgD"></select><select id="lgM"></select><select id="lgY"></select></div>
+    </div>
     <button class="btn-primary" onclick="cariSiswa()">🔍 Cari Kartu Saya</button>
     <div class="demo-hint">Masukkan NIS/NISN, lalu pilih tanggal lahir lewat kalender sesuai yang terdaftar di sekolah. Kalau data belum muncul, mungkin admin belum menginput data kamu — hubungi TU sekolah.</div>
   </div>
@@ -146,14 +154,27 @@ body.result .admin-btn:hover{background:rgba(26,122,61,.14)}
         <div id="editbox">
           <div class="ipanel-t">Ubah Data Kamu</div>
           <div class="savedmsg" id="savedmsg">✅ Perubahan tersimpan</div>
+          <div class="fg"><label class="fl">Foto Profil</label>
+            <div class="stabs" style="margin-bottom:8px"><button type="button" class="stab on" id="epmU" onclick="setEditPhotoMode('upload')">📁 Upload File</button><button type="button" class="stab" id="epmL" onclick="setEditPhotoMode('link')">🔗 Link URL</button></div>
+            <div id="epUpload" style="display:flex;align-items:center;gap:10px">
+              <div id="epThumb" style="width:44px;height:56px;border-radius:6px;background:var(--g50);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0">👤</div>
+              <label style="flex:1;padding:10px;border:1.5px dashed var(--g500);border-radius:9px;text-align:center;font-size:12px;color:var(--g700);cursor:pointer">Klik pilih file foto<input type="file" accept="image/*" style="display:none" onchange="pickEditPhoto(this)"></label>
+            </div>
+            <div id="epLink" style="display:none"><input class="fi" id="efotolink" placeholder="https://contoh.com/foto.jpg" oninput="pickEditPhotoLink(this.value)"></div>
+          </div>
           <div class="g2">
             <div class="fg"><label class="fl">Nama Lengkap</label><input class="fi" id="enama"></div>
             <div class="fg"><label class="fl">Kelas</label><input class="fi" id="ekelas"></div>
+            <div class="fg"><label class="fl">Tempat Lahir</label><input class="fi" id="ettl"></div>
             <div class="fg"><label class="fl">Golongan Darah</label>
               <select class="fi" id="egol"><option>A</option><option>B</option><option>AB</option><option>O</option><option>Tidak Diketahui</option></select>
             </div>
-            <div class="fg"><label class="fl">No. HP/WA</label><input class="fi" id="ehp"></div>
           </div>
+          <div class="fg"><label class="fl">Tanggal Lahir</label>
+            <div class="dategroup"><select id="edD"></select><select id="edM"></select><select id="edY"></select></div>
+          </div>
+          <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="ealamat" rows="2" style="resize:vertical"></textarea></div>
+          <div class="fg"><label class="fl">No. HP/WA</label><input class="fi" id="ehp"></div>
           <div class="actions">
             <button class="btn-primary" style="margin:0" onclick="simpanEdit()">💾 Simpan Perubahan</button>
           </div>
@@ -176,7 +197,7 @@ const CW=1011,CH=638;
 const IL={
   photo:{x:3.5,y:22,w:22,h:55},nama:{x:29,y:27,fs:22,bold:true,col:'#1a5c2a'},
   nisNisn:{x:29,y:34,fs:11,bold:false,col:'#333'},kelas:{x:29,y:41,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:48,fs:11,bold:false,col:'#333'},
-  ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333'},
+  ttl:{x:29,y:55,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:62,fs:9,bold:false,col:'#333'},alamat:{x:29,y:69,fs:9,bold:false,col:'#333',maxW:47},
   golDarah:{x:29,y:76,fs:11,bold:false,col:'#333'},noHp:{x:29,y:84,fs:10,bold:false,col:'#333'},
   berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
@@ -198,8 +219,11 @@ async function renderCard(student,canvas,side,ctxData){
   if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   if(!L.qrCode.hidden){const qrURL=await getQR(student,ss);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(ttdImg&&!L.ttdImg.hidden){try{const p=L.ttdImg;const img=await loadImg(ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
-  const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';ctx.fillText(text,p.x/100*CW,p.y/100*CH);};
-  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`Tempat Lahir   : ${student.ttl}`);dt('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
+  const wrapText=(text,maxPx)=>{const words=text.split(' ');const lines=[];let cur='';for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxPx&&cur){lines.push(cur);cur=w;}else cur=test;}if(cur)lines.push(cur);return lines;};
+  const COLX=15;
+  const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';if(p.maxW){const lines=wrapText(text,p.maxW/100*CW);const lh=p.fs*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,p.x/100*CW,p.y/100*CH+i*lh));}else{ctx.fillText(text,p.x/100*CW,p.y/100*CH);}};
+  const dtLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';const x=p.x/100*CW,y=p.y/100*CH,colonX=x+COLX/100*CW,valX=colonX+8;ctx.fillText(label,x,y);ctx.fillText(':',colonX,y);if(p.maxW){const availPx=(p.x+p.maxW)/100*CW-valX;const lines=wrapText(value,availPx);const lh=p.fs*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,valX,y+i*lh));}else{ctx.fillText(value,valX,y);}};
+  dt('nama',student.nama);dtLV('nisNisn','NIS/NISN',student.nisNisn);dtLV('kelas','Kelas',student.kelas||'');dtLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);dtLV('ttl','Tempat Lahir',student.ttl);dtLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));dtLV('alamat','Alamat',student.alamat);dtLV('golDarah','Gol. Darah',student.golDarah);dtLV('noHp','No. HP/WA',student.noHp);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
   const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
 }
 
@@ -208,8 +232,11 @@ async function loadSettings(){
     const{data}=await SB.from('app_settings').select('*').eq('id',1).maybeSingle();
     const d=(data&&data.data)||{};
     const{ttdImg,layout,tmplFront,tmplBack,...rest}=d;
+    const dIL=JSON.parse(JSON.stringify(IL));const mergedLayout={};
+    Object.keys(dIL).forEach(k=>{mergedLayout[k]=Object.assign({},dIL[k],(layout&&layout[k])||{});});
+    if(layout)Object.keys(layout).forEach(k=>{if(!mergedLayout[k])mergedLayout[k]=layout[k];});
     return{
-      layout:Object.assign(JSON.parse(JSON.stringify(IL)),layout||{}),
+      layout:mergedLayout,
       tmplFront:tmplFront||null,tmplBack:tmplBack||null,ttdImg:ttdImg||null,
       settings:Object.assign({},DEFAULT_SETTINGS,rest)
     };
@@ -220,18 +247,25 @@ async function loadSettings(){
 
 async function renderBothSides(){
   document.getElementById('cardLoading').style.display='flex';
+  document.getElementById('cardLoading').textContent='Memuat kartu...';
   document.getElementById('cardImg').style.display='none';
-  const ctxData=window._brandCtx||await loadSettings();
-  const cv=document.getElementById('cardCanvas');
-  await renderCard(current,cv,'front',ctxData);
-  cardURLs.front=cv.toDataURL('image/png');
-  await renderCard(current,cv,'back',ctxData);
-  cardURLs.back=cv.toDataURL('image/png');
-  cardSide='front';
-  document.getElementById('cardImg').src=cardURLs.front;
-  document.getElementById('cardImg').style.display='block';
-  document.getElementById('cardLoading').style.display='none';
-  document.getElementById('flipbtn').textContent='🔄 Lihat Sisi Belakang';
+  try{
+    const ctxData=window._brandCtx||await loadSettings();
+    const cv=document.getElementById('cardCanvas');
+    await renderCard(current,cv,'front',ctxData);
+    cardURLs.front=cv.toDataURL('image/png');
+    await renderCard(current,cv,'back',ctxData);
+    cardURLs.back=cv.toDataURL('image/png');
+    cardSide='front';
+    document.getElementById('cardImg').src=cardURLs.front;
+    document.getElementById('cardImg').style.display='block';
+    document.getElementById('flipbtn').textContent='🔄 Lihat Sisi Belakang';
+  }catch(e){
+    document.getElementById('cardLoading').textContent='Gagal memuat kartu, coba lagi';
+    toast('Gagal merender kartu: '+e.message);
+  }finally{
+    document.getElementById('cardLoading').style.display='none';
+  }
 }
 function flipCard(){
   if(!cardURLs.front)return;
@@ -264,9 +298,32 @@ function normalizeTgl(v){
   return v;
 }
 
+// ══ Dropdown Tanggal (dd/mm/yyyy) — supaya tidak tergantung format bawaan browser ══
+const BULAN_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function buildDateSelects(pfx,minY,maxY){
+  const d=document.getElementById(pfx+'D'),m=document.getElementById(pfx+'M'),y=document.getElementById(pfx+'Y');
+  if(!d||!m||!y)return;
+  d.innerHTML='<option value="">Tgl</option>'+Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+  m.innerHTML='<option value="">Bulan</option>'+BULAN_ID.map((b,i)=>`<option value="${i+1}">${b}</option>`).join('');
+  let yo='<option value="">Tahun</option>';for(let yy=maxY;yy>=minY;yy--)yo+=`<option value="${yy}">${yy}</option>`;
+  y.innerHTML=yo;
+}
+function getDateISO(pfx){
+  const d=document.getElementById(pfx+'D').value,m=document.getElementById(pfx+'M').value,y=document.getElementById(pfx+'Y').value;
+  if(!d||!m||!y)return'';
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function setDateISO(pfx,iso){
+  const d=document.getElementById(pfx+'D'),m=document.getElementById(pfx+'M'),y=document.getElementById(pfx+'Y');
+  if(!iso){d.value='';m.value='';y.value='';return;}
+  const[yy,mm,dd]=iso.split('-');
+  d.value=String(+dd);m.value=String(+mm);y.value=String(+yy);
+}
+(function(){const curY=new Date().getFullYear();buildDateSelects('lg',curY-40,curY-3);buildDateSelects('ed',curY-40,curY-3);})();
+
 async function cariSiswa(){
   const nis=document.getElementById('cnis').value.trim();
-  const ttlInput=normalizeTgl(document.getElementById('cttl').value);
+  const ttlInput=getDateISO('lg');
   const err=document.getElementById('errmsg');
   if(!nis||!ttlInput){err.textContent='Isi NIS/NISN dan tanggal lahir dulu ya.';err.style.display='block';return;}
   const btn=document.querySelector('.btn-primary');btn.disabled=true;btn.textContent='Mencari...';
@@ -307,8 +364,49 @@ function tampilkanDataPanel(){
   document.getElementById('dalamat').textContent=s.alamat;
   document.getElementById('enama').value=s.nama;
   document.getElementById('ekelas').value=s.kelas;
+  document.getElementById('ettl').value=s.ttl||'';
+  document.getElementById('ealamat').value=s.alamat||'';
   document.getElementById('egol').value=['A','B','AB','O'].includes(s.golDarah)?s.golDarah:'A';
   document.getElementById('ehp').value=s.noHp||'';
+  setDateISO('ed',s.tanggalLahir||'');
+  editPhotoValue=s.photo||null;
+  const isLink=!!s.photo&&!s.photo.includes('supabase.co/storage')&&!s.photo.startsWith('data:');
+  setEditPhotoMode(isLink?'link':'upload');
+  if(isLink)document.getElementById('efotolink').value=s.photo;
+  document.getElementById('epThumb').innerHTML=s.photo?`<img src="${s.photo}" style="width:100%;height:100%;object-fit:cover">`:'👤';
+}
+
+function setEditPhotoMode(m){
+  document.getElementById('epUpload').style.display=m==='upload'?'flex':'none';
+  document.getElementById('epLink').style.display=m==='link'?'block':'none';
+  document.getElementById('epmU').classList.toggle('on',m==='upload');
+  document.getElementById('epmL').classList.toggle('on',m==='link');
+}
+let editPhotoValue=null;
+async function pickEditPhoto(inp){
+  const f=inp.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    const dataUrl=e.target.result;
+    document.getElementById('epThumb').innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    editPhotoValue=dataUrl; // akan diupload ke Storage saat klik Simpan
+  };
+  reader.readAsDataURL(f);
+}
+function pickEditPhotoLink(url){
+  url=url.trim();
+  editPhotoValue=url||null;
+  document.getElementById('epThumb').innerHTML=url?`<img src="${url}" onerror="this.parentElement.textContent='⚠️'" style="width:100%;height:100%;object-fit:cover">`:'👤';
+}
+async function uploadEditPhoto(base64,nama){
+  try{
+    const blob=await fetch(base64).then(r=>r.blob());
+    const fn=`${Date.now()}-${nama.replace(/\s+/g,'-').toLowerCase()}.jpg`;
+    const{error}=await SB.storage.from('foto-siswa').upload(fn,blob,{contentType:'image/jpeg',upsert:true});
+    if(error)throw error;
+    const{data}=SB.storage.from('foto-siswa').getPublicUrl(fn);
+    return data.publicUrl;
+  }catch(e){throw e;}
 }
 
 function toggleEdit(){
@@ -320,16 +418,26 @@ function toggleEdit(){
 async function simpanEdit(){
   // Sesuai keputusan: LANGSUNG update ke database, tanpa approval admin
   const btn=event.target;btn.disabled=true;btn.textContent='Menyimpan...';
-  const upd={
-    nama:document.getElementById('enama').value.trim()||current.nama,
-    kelas:document.getElementById('ekelas').value.trim(),
-    gol_darah:document.getElementById('egol').value,
-    no_hp:document.getElementById('ehp').value.trim()
-  };
   try{
+    let photoUrl=current.photo;
+    if(editPhotoValue&&editPhotoValue.startsWith('data:')){
+      photoUrl=await uploadEditPhoto(editPhotoValue,document.getElementById('enama').value.trim()||current.nama);
+    }else if(editPhotoValue!==null){
+      photoUrl=editPhotoValue; // link URL langsung
+    }
+    const upd={
+      nama:document.getElementById('enama').value.trim()||current.nama,
+      kelas:document.getElementById('ekelas').value.trim(),
+      ttl:document.getElementById('ettl').value.trim(),
+      tanggal_lahir:getDateISO('ed')||null,
+      alamat:document.getElementById('ealamat').value.trim(),
+      gol_darah:document.getElementById('egol').value,
+      no_hp:document.getElementById('ehp').value.trim(),
+      photo_url:photoUrl
+    };
     const{error}=await SB.from('siswa').update(upd).eq('id',current.id);
     if(error)throw error;
-    current.nama=upd.nama;current.kelas=upd.kelas;current.golDarah=upd.gol_darah;current.noHp=upd.no_hp;
+    current.nama=upd.nama;current.kelas=upd.kelas;current.ttl=upd.ttl;current.tanggalLahir=upd.tanggal_lahir;current.alamat=upd.alamat;current.golDarah=upd.gol_darah;current.noHp=upd.no_hp;current.photo=upd.photo_url;
     tampilkanDataPanel();
     document.getElementById('savedmsg').style.display='flex';
     toast('Perubahan langsung tersimpan ke data ✅');
@@ -346,8 +454,8 @@ function keluarPortal(){
   document.getElementById('portal').style.display='flex';
   document.body.classList.remove('result');
   document.getElementById('editbox').style.display='none';
-  document.getElementById('cnis').value='';document.getElementById('cttl').value='';
-  current=null;cardURLs={front:null,back:null};
+  document.getElementById('cnis').value='';setDateISO('lg','');
+  current=null;cardURLs={front:null,back:null};editPhotoValue=null;
 }
 
 function toast(msg){
