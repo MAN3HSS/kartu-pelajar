@@ -191,6 +191,9 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 .fdot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
 .slbl{font-size:10px;font-weight:700;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;padding:8px 0 4px;display:block}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dategroup{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px}
+.dategroup select{width:100%;padding:10px 8px;border:1.5px solid var(--border);border-radius:9px;font-family:var(--font);font-size:13px;background:var(--g50)}
+.dategroup select:focus{outline:none;border-color:var(--g500);background:#fff}
 .nodata{text-align:center;padding:32px;color:var(--txt3);font-size:13px}
 .sbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .sbar input{flex:1;min-width:150px;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;transition:var(--tr)}
@@ -337,78 +340,95 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <div class="page" id="p2">
   <h2>Data Siswa</h2>
   <p class="pdesc">Tambah satu per satu atau import dari Excel. Foto dikompres otomatis.</p>
-  <div class="row">
-    <div class="f300">
-      <div class="card">
-        <div class="stabs">
-          <button class="stab on" id="ms" onclick="setMode('single')">👤 Satu Siswa</button>
-          <button class="stab" id="me" onclick="setMode('excel')">📊 Import Excel</button>
+  <div class="sbar" style="flex-wrap:wrap">
+    <input placeholder="🔍 Cari nama / NIS..." oninput="renderList()" id="cari" style="min-width:180px">
+    <select id="filkelas" onchange="renderList()" class="fi" style="width:auto;min-width:140px;padding:9px 10px">
+      <option value="">Semua Kelas</option>
+    </select>
+    <span class="badge bg2" id="jml">0 siswa</span>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn bg bsm" onclick="openFormModal('new')">+ Tambah Siswa</button>
+      <button class="btn bb bsm" onclick="openFormModal('excel')">📊 Import Excel</button>
+      <button class="btn bg bsm" onclick="goPage(3)">Ke Unduh →</button>
+    </div>
+  </div>
+  <div id="bulkbar" style="display:none;align-items:center;gap:10px;background:var(--g50);border:1px solid var(--g100);border-radius:10px;padding:10px 14px;margin-bottom:12px;flex-wrap:wrap">
+    <span id="bulkcnt" style="font-weight:700;font-size:13px;color:var(--g800)">0 dipilih</span>
+    <select id="bulkkelas" class="fi" style="width:auto;padding:7px 10px;font-size:12px"></select>
+    <button class="btn bgold bsm" onclick="naikKelasMassal()">⬆ Naik Kelaskan ke Sini</button>
+    <button class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2" onclick="hapusMassal()">🗑 Hapus Terpilih</button>
+    <button class="btn bgy bsm" onclick="batalPilih()" style="margin-left:auto">Batal Pilih</button>
+  </div>
+  <div class="twrap">
+    <table class="tbl">
+      <thead><tr><th style="width:30px"><input type="checkbox" id="chkall" onchange="toggleAllChk(this)"></th><th>#</th><th>Foto</th><th>Nama</th><th>NIS/NISN</th><th>Kelas</th><th>J.K</th><th>✓</th><th>Aksi</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div id="nodata" class="nodata"><div style="font-size:40px;margin-bottom:10px">📋</div>Belum ada data siswa.</div>
+</div>
+
+<div id="formModal" class="cropmodal" style="align-items:flex-start;overflow-y:auto;padding:30px 20px" onclick="if(event.target===this)closeFormModal()">
+  <div class="cropbox" style="max-width:480px;text-align:left;margin:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="cropbox-t" id="formModalTitle" style="margin-bottom:0">+ Tambah Siswa</div>
+      <div class="pmclose" style="position:static;width:32px;height:32px;font-size:16px;background:var(--g50);color:var(--txt2)" onclick="closeFormModal()">✕</div>
+    </div>
+    <div class="stabs" id="formTabs">
+      <button class="stab on" id="ms" onclick="setMode('single')">👤 Satu Siswa</button>
+      <button class="stab" id="me" onclick="setMode('excel')">📊 Import Excel</button>
+    </div>
+    <div id="ds">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;margin-top:12px">
+        <div id="pht"><div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div></div>
+        <div style="flex:1">
+          <div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div>
+          <div style="color:var(--txt3);font-size:11px">Pilih Upload File atau Link URL di bawah</div>
+          <button type="button" class="btn bgy bsm" style="margin-top:6px;padding:4px 10px" onclick="recropCurrent()">✂️ Crop Ulang</button>
         </div>
-        <div id="ds">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-            <div id="pht"><div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div></div>
-            <div style="flex:1">
-              <div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div>
-              <div style="color:var(--txt3);font-size:11px">Pilih Upload File atau Link URL di bawah</div>
-              <button type="button" class="btn bgy bsm" style="margin-top:6px;padding:4px 10px" onclick="recropCurrent()">✂️ Crop Ulang</button>
-            </div>
-          </div>
-          <div class="stabs" style="margin-bottom:10px">
-            <button type="button" class="stab on" id="pmU" onclick="setPhotoMode('upload')">📁 Upload File</button>
-            <button type="button" class="stab" id="pmL" onclick="setPhotoMode('link')">🔗 Link URL</button>
-          </div>
-          <label class="uz gold" id="phUpload" style="display:flex;align-items:center;gap:12px;text-align:left;padding:11px">
-            <input type="file" accept="image/*" onchange="pickPhoto(this)">
-            <div class="uz-i">📁</div>
-            <div><div class="uz-l" style="color:var(--gold-dark)">Klik untuk pilih file foto</div><div class="uz-s">Dikompres otomatis</div></div>
-          </label>
-          <div id="phLink" style="display:none">
-            <div class="fg"><label class="fl">Link/URL Foto</label><input class="fi" id="fphotolink" placeholder="https://contoh.com/foto.jpg" oninput="pickPhotoLink(this.value)"></div>
-            <div class="ibox" style="margin-bottom:12px"><div class="ibox-t">Catatan</div>Pastikan link gambar bisa diakses publik (bukan link privat Google Drive dsb). Foto tidak akan dikompres karena diambil langsung dari link.</div>
-          </div>
-          <div class="fg"><label class="fl">Nama Lengkap *</label><input class="fi" id="fn" placeholder="ANZILIE RAHMA"></div>
-          <div class="fg"><label class="fl">NIS/NISN *</label><input class="fi" id="fnis" placeholder="3083045603"></div>
-          <div class="fg"><label class="fl">Kelas</label><input class="fi" id="fkelas" placeholder="XII IPA 1"></div>
-          <div class="g2">
-            <div class="fg"><label class="fl">Jenis Kelamin</label><select class="fi" id="fjk"><option>Laki-laki</option><option>Perempuan</option></select></div>
-            <div class="fg"><label class="fl">Gol. Darah</label><select class="fi" id="fgol"><option>A</option><option>B</option><option>AB</option><option>O</option><option>Tidak Diketahui</option></select></div>
-          </div>
-          <div class="fg"><label class="fl">Tempat Lahir</label><input class="fi" id="fttl" placeholder="Hulu Sungai Selatan"></div>
-          <div class="fg"><label class="fl">Tanggal Lahir <span style="font-weight:400;color:var(--txt3)">(ikut tercetak di kartu & dipakai login Portal)</span></label><input class="fi" id="ftgllahir" type="date"></div>
-          <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="fal" placeholder="Jl. ..." rows="2"></textarea></div>
-          <div class="fg"><label class="fl">No. HP/WA Orang Tua</label><input class="fi" id="fhp" placeholder="08xxxxxxxxxx"></div>
-          <div class="fg"><label class="fl">No. Kartu RFID <span style="font-weight:400;color:var(--txt3)">(opsional — barcode otomatis dibuat)</span></label><input class="fi" id="frfid" placeholder="0004512389"></div>
-          <div class="fg"><label class="fl">Berlaku Sampai</label><input class="fi" id="fbrl" placeholder="31 JULI 2026"></div>
-          <input type="hidden" id="fid">
-          <div style="display:flex;gap:8px">
-            <button class="btn bgy f1" onclick="resetForm()">Reset</button>
-            <button class="btn bg f1" id="btnsave" onclick="saveSiswa()">+ Simpan</button>
-          </div>
-        </div>
-        <div id="de" style="display:none">
-          <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
-            <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
-            <div class="uz-s">.xlsx / .xls / .csv</div></label>
-          <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | Tempat Lahir | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
-          <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
-          <button class="btn bg bl bsm" onclick="dlExportXL()" style="margin-top:6px">📤 Export Semua Data Siswa (buat edit massal)</button>
-          <div class="ibox" style="margin-top:8px"><div class="ibox-t">💡 Tips edit massal</div>Export dulu data yang sekarang, edit di Excel (nomor ID jangan diubah/dihapus), lalu import lagi file yang sama — data dengan ID yang cocok otomatis DIPERBARUI, bukan bikin duplikat baru.</div>
-        </div>
+      </div>
+      <div class="stabs" style="margin-bottom:10px">
+        <button type="button" class="stab on" id="pmU" onclick="setPhotoMode('upload')">📁 Upload File</button>
+        <button type="button" class="stab" id="pmL" onclick="setPhotoMode('link')">🔗 Link URL</button>
+      </div>
+      <label class="uz gold" id="phUpload" style="display:flex;align-items:center;gap:12px;text-align:left;padding:11px">
+        <input type="file" accept="image/*" onchange="pickPhoto(this)">
+        <div class="uz-i">📁</div>
+        <div><div class="uz-l" style="color:var(--gold-dark)">Klik untuk pilih file foto</div><div class="uz-s">Dikompres otomatis</div></div>
+      </label>
+      <div id="phLink" style="display:none">
+        <div class="fg"><label class="fl">Link/URL Foto</label><input class="fi" id="fphotolink" placeholder="https://contoh.com/foto.jpg" oninput="pickPhotoLink(this.value)"></div>
+        <div class="ibox" style="margin-bottom:12px"><div class="ibox-t">Catatan</div>Pastikan link gambar bisa diakses publik (bukan link privat Google Drive dsb). Foto tidak akan dikompres karena diambil langsung dari link.</div>
+      </div>
+      <div class="fg"><label class="fl">Nama Lengkap *</label><input class="fi" id="fn" placeholder="ANZILIE RAHMA"></div>
+      <div class="fg"><label class="fl">NIS/NISN *</label><input class="fi" id="fnis" placeholder="3083045603"></div>
+      <div class="fg"><label class="fl">Kelas</label><input class="fi" id="fkelas" placeholder="XII IPA 1"></div>
+      <div class="g2">
+        <div class="fg"><label class="fl">Jenis Kelamin</label><select class="fi" id="fjk"><option>Laki-laki</option><option>Perempuan</option></select></div>
+        <div class="fg"><label class="fl">Gol. Darah</label><select class="fi" id="fgol"><option>A</option><option>B</option><option>AB</option><option>O</option><option>Tidak Diketahui</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">Tempat Lahir</label><input class="fi" id="fttl" placeholder="Hulu Sungai Selatan"></div>
+      <div class="fg"><label class="fl">Tanggal Lahir <span style="font-weight:400;color:var(--txt3)">(ikut tercetak di kartu & dipakai login Portal)</span></label>
+        <div class="dategroup"><select id="ftgllahirD"></select><select id="ftgllahirM"></select><select id="ftgllahirY"></select></div>
+      </div>
+      <div class="fg"><label class="fl">Alamat</label><textarea class="fi" id="fal" placeholder="Jl. ..." rows="2"></textarea></div>
+      <div class="fg"><label class="fl">No. HP/WA Orang Tua</label><input class="fi" id="fhp" placeholder="08xxxxxxxxxx"></div>
+      <div class="fg"><label class="fl">No. Kartu RFID <span style="font-weight:400;color:var(--txt3)">(opsional — barcode otomatis dibuat)</span></label><input class="fi" id="frfid" placeholder="0004512389"></div>
+      <div class="fg"><label class="fl">Berlaku Sampai</label><input class="fi" id="fbrl" placeholder="31 JULI 2026"></div>
+      <input type="hidden" id="fid">
+      <div style="display:flex;gap:8px">
+        <button class="btn bgy f1" onclick="resetForm()">Reset</button>
+        <button class="btn bg f1" id="btnsave" onclick="saveSiswa()">+ Simpan</button>
       </div>
     </div>
-    <div class="f1">
-      <div class="sbar">
-        <input placeholder="🔍 Cari nama / NIS..." oninput="renderList()" id="cari">
-        <span class="badge bg2" id="jml">0 siswa</span>
-        <button class="btn bg bsm" onclick="goPage(3)">Ke Unduh →</button>
-      </div>
-      <div class="twrap">
-        <table class="tbl">
-          <thead><tr><th>#</th><th>Foto</th><th>Nama</th><th>NIS/NISN</th><th>J.K</th><th>✓</th><th>Aksi</th></tr></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <div id="nodata" class="nodata"><div style="font-size:40px;margin-bottom:10px">📋</div>Belum ada data siswa.</div>
+    <div id="de" style="display:none;margin-top:12px">
+      <label class="uz blue"><input type="file" accept=".xlsx,.xls,.csv" onchange="importXL(this)">
+        <div class="uz-i">📊</div><div class="uz-l" style="color:var(--blue)">Upload Excel/CSV</div>
+        <div class="uz-s">.xlsx / .xls / .csv</div></label>
+      <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | Tempat Lahir | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
+      <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
+      <button class="btn bg bl bsm" onclick="dlExportXL()" style="margin-top:6px">📤 Export Semua Data Siswa (buat edit massal)</button>
+      <div class="ibox" style="margin-top:8px"><div class="ibox-t">💡 Tips edit massal</div>Export dulu data yang sekarang, edit di Excel (nomor ID jangan diubah/dihapus), lalu import lagi file yang sama — data dengan ID yang cocok otomatis DIPERBARUI, bukan bikin duplikat baru.</div>
     </div>
   </div>
 </div>
@@ -561,6 +581,28 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 
 <script>
 const CW=1011,CH=638,DW=740,DH=Math.round(740*CH/CW);
+// ══ Dropdown Tanggal (dd/mm/yyyy) — supaya tidak tergantung format bawaan browser ══
+const BULAN_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function buildDateSelects(pfx,minY,maxY){
+  const d=document.getElementById(pfx+'D'),m=document.getElementById(pfx+'M'),y=document.getElementById(pfx+'Y');
+  if(!d||!m||!y)return;
+  d.innerHTML='<option value="">Tgl</option>'+Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+  m.innerHTML='<option value="">Bulan</option>'+BULAN_ID.map((b,i)=>`<option value="${i+1}">${b}</option>`).join('');
+  let yo='<option value="">Tahun</option>';for(let yy=maxY;yy>=minY;yy--)yo+=`<option value="${yy}">${yy}</option>`;
+  y.innerHTML=yo;
+}
+function getDateISO(pfx){
+  const d=document.getElementById(pfx+'D').value,m=document.getElementById(pfx+'M').value,y=document.getElementById(pfx+'Y').value;
+  if(!d||!m||!y)return'';
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function setDateISO(pfx,iso){
+  const d=document.getElementById(pfx+'D'),m=document.getElementById(pfx+'M'),y=document.getElementById(pfx+'Y');
+  if(!iso){d.value='';m.value='';y.value='';return;}
+  const[yy,mm,dd]=iso.split('-');
+  d.value=String(+dd);m.value=String(+mm);y.value=String(+yy);
+}
+(function(){const curY=new Date().getFullYear();buildDateSelects('ftgllahir',curY-40,curY-3);})();
 const PTITLES=['Template Kartu','Editor Posisi','Data Siswa','Unduh Kartu','Pengaturan'];
 const PSUBS=['Langkah 1 dari 4','Langkah 2 dari 4','Langkah 3 dari 4','Langkah 4 dari 4','Pengaturan Sistem'];
 const FIELDS=[
@@ -968,7 +1010,7 @@ async function saveSiswa(){
   const eid=gv('fid');
   const s={
     id:eid||uid(),nama:gv('fn').trim(),nisNisn:gv('fnis').trim(),kelas:gv('fkelas').trim(),
-    jenisKelamin:document.getElementById('fjk').value,ttl:gv('fttl').trim(),tanggalLahir:gv('ftgllahir'),
+    jenisKelamin:document.getElementById('fjk').value,ttl:gv('fttl').trim(),tanggalLahir:getDateISO('ftgllahir'),
     alamat:gv('fal').trim(),golDarah:document.getElementById('fgol').value,
     noHp:gv('fhp').trim(),noRfid:gv('frfid').trim(),berlakuSampai:gv('fbrl').trim(),photo:S.curPhoto,
   };
@@ -1004,16 +1046,17 @@ async function saveSiswa(){
     renderList();fillSel();
   }
   resetForm();
+  closeFormModal();
   toast(eid?`Data ${s.nama} diperbarui ✅`:`${s.nama} ditambahkan ✅`);
 }
 
-function resetForm(){['fn','fnis','fkelas','fttl','ftgllahir','fal','fhp','frfid','fbrl','fid','fphotolink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';setPhotoMode('upload');document.getElementById('btnsave').textContent='+ Simpan';}
+function resetForm(){['fn','fnis','fkelas','fttl','fal','fhp','frfid','fbrl','fid','fphotolink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});setDateISO('ftgllahir','');document.getElementById('fjk').value='Laki-laki';document.getElementById('fgol').value='A';S.curPhoto=null;document.getElementById('pht').innerHTML='<div style="width:48px;height:60px;background:var(--g100);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border)">👤</div>';document.getElementById('phl').textContent='📸 Upload Foto';setPhotoMode('upload');document.getElementById('btnsave').textContent='+ Simpan';}
 
-function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fkelas').value=s.kelas||'';document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;document.getElementById('ftgllahir').value=s.tanggalLahir||'';document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('frfid').value=s.noRfid||'';document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;
+function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;document.getElementById('fn').value=s.nama;document.getElementById('fnis').value=s.nisNisn;document.getElementById('fkelas').value=s.kelas||'';document.getElementById('fjk').value=s.jenisKelamin;document.getElementById('fttl').value=s.ttl;setDateISO('ftgllahir',s.tanggalLahir||'');document.getElementById('fal').value=s.alamat;document.getElementById('fgol').value=s.golDarah;document.getElementById('fhp').value=s.noHp;document.getElementById('frfid').value=s.noRfid||'';document.getElementById('fbrl').value=s.berlakuSampai;document.getElementById('fid').value=s.id;S.curPhoto=s.photo;
   const isLink=!!s.photo&&!s.photo.startsWith('data:')&&!s.photo.includes('supabase.co/storage');
   if(s.photo){document.getElementById('pht').innerHTML=`<img src="${s.photo}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Ganti Foto';}
   setPhotoMode(isLink?'link':'upload');if(isLink)document.getElementById('fphotolink').value=s.photo;
-  document.getElementById('btnsave').textContent='💾 Update';setMode('single');goPage(2);}
+  document.getElementById('btnsave').textContent='💾 Update';openFormModal('edit');}
 
 async function hapusSiswa(id){
   const s=S.students.find(x=>x.id===id);if(!confirm(`Hapus ${s?.nama||'ini'}?`))return;
@@ -1024,25 +1067,97 @@ async function hapusSiswa(id){
 
 function showPhotoModal(url){document.getElementById('pmimg').src=url;document.getElementById('photoModal').classList.add('on');}
 function closePhotoModal(){document.getElementById('photoModal').classList.remove('on');document.getElementById('pmimg').src='';}
+function refreshKelasFilter(){
+  const kelasList=[...new Set(S.students.map(s=>s.kelas).filter(Boolean))].sort();
+  const fil=document.getElementById('filkelas'),bulk=document.getElementById('bulkkelas');
+  const curFil=fil?fil.value:'';
+  if(fil)fil.innerHTML='<option value="">Semua Kelas</option>'+kelasList.map(k=>`<option value="${k}"${k===curFil?' selected':''}>${k}</option>`).join('');
+  if(bulk)bulk.innerHTML=kelasList.map(k=>`<option value="${k}">${k}</option>`).join('')+'<option value="__custom__">✏️ Kelas lain (ketik manual)</option>';
+}
+let selectedIds=new Set();
 function renderList(){
+  refreshKelasFilter();
   const q=(document.getElementById('cari')?.value||'').toLowerCase();
-  const fil=S.students.filter(s=>s.nama.toLowerCase().includes(q)||s.nisNisn.toLowerCase().includes(q));
+  const filKelas=document.getElementById('filkelas')?.value||'';
+  const fil=S.students.filter(s=>(s.nama.toLowerCase().includes(q)||s.nisNisn.toLowerCase().includes(q))&&(!filKelas||s.kelas===filKelas));
   const tb=document.getElementById('tbody');tb.innerHTML='';
-  document.getElementById('jml').textContent=S.students.length+' siswa';
+  document.getElementById('jml').textContent=S.students.length+' siswa'+(filKelas?` (${fil.length} tampil)`:'');
   document.getElementById('nodata').style.display=S.students.length===0?'block':'none';
   fil.forEach((s,i)=>{
     const tr=document.createElement('tr');
-    const ph=s.photo?`<img src="${s.photo}" class="tph" onclick="showPhotoModal('${s.photo.replace(/'/g,"\\'")}')" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
-    tr.innerHTML=`<td style="color:var(--txt3);font-size:11px">${i+1}</td><td>${ph}</td><td style="font-weight:600">${s.nama}</td><td style="font-family:monospace;font-size:12px">${s.nisNisn}</td><td>${s.jenisKelamin}</td><td>${s.photo?'<span style="color:var(--g600);font-weight:700">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
-    <td style="white-space:nowrap">
-      <button onclick="editSiswa('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--blue);border:1px solid #90caf9;padding:4px 9px;font-size:11px">✏</button>
+    tr.style.cursor='pointer';
+    tr.onclick=()=>editSiswa(s.id);
+    const ph=s.photo?`<img src="${s.photo}" class="tph" onclick="event.stopPropagation();showPhotoModal('${s.photo.replace(/'/g,"\\'")}')" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
+    tr.innerHTML=`<td onclick="event.stopPropagation()"><input type="checkbox" class="chkrow" data-id="${s.id}" ${selectedIds.has(s.id)?'checked':''} onchange="toggleChk('${s.id}',this)"></td><td style="color:var(--txt3);font-size:11px">${i+1}</td><td>${ph}</td><td style="font-weight:600">${s.nama}</td><td style="font-family:monospace;font-size:12px">${s.nisNisn}</td><td>${s.kelas?`<span class="badge bg2" style="font-size:10px;padding:2px 8px">${s.kelas}</span>`:'<span style="color:var(--txt3);font-size:11px">—</span>'}</td><td>${s.jenisKelamin}</td><td>${s.photo?'<span style="color:var(--g600);font-weight:700">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
+    <td style="white-space:nowrap" onclick="event.stopPropagation()">
       <button onclick="hapusSiswa('${s.id}')" class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2;padding:4px 9px;font-size:11px">🗑</button>
       <button onclick="qdl('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--g700);border:1px solid var(--g300);padding:4px 9px;font-size:11px">📥</button>
     </td>`;
     tb.appendChild(tr);
   });
+  updateBulkBar();
+}
+function toggleChk(id,el){if(el.checked)selectedIds.add(id);else selectedIds.delete(id);updateBulkBar();}
+function toggleAllChk(el){
+  const rows=document.querySelectorAll('.chkrow');
+  rows.forEach(r=>{r.checked=el.checked;if(el.checked)selectedIds.add(r.dataset.id);else selectedIds.delete(r.dataset.id);});
+  updateBulkBar();
+}
+function updateBulkBar(){
+  const bar=document.getElementById('bulkbar');
+  if(selectedIds.size>0){bar.style.display='flex';document.getElementById('bulkcnt').textContent=selectedIds.size+' dipilih';}
+  else bar.style.display='none';
+}
+function batalPilih(){selectedIds.clear();document.querySelectorAll('.chkrow').forEach(r=>r.checked=false);const ca=document.getElementById('chkall');if(ca)ca.checked=false;updateBulkBar();}
+async function naikKelasMassal(){
+  if(!selectedIds.size){toast('Pilih siswa dulu','err');return;}
+  let target=document.getElementById('bulkkelas').value;
+  if(target==='__custom__'){target=prompt('Ketik nama kelas tujuan:');if(!target)return;target=target.trim();if(!target)return;}
+  if(!target){toast('Pilih kelas tujuan dulu','err');return;}
+  if(!confirm(`Pindahkan ${selectedIds.size} siswa terpilih ke kelas "${target}"?`))return;
+  showOv(`Memindahkan ${selectedIds.size} siswa ke ${target}...`);
+  try{
+    const ids=[...selectedIds];
+    if(SB){
+      const{error}=await SB.from('siswa').update({kelas:target}).in('id',ids);
+      if(error)throw error;
+      await loadFromDB();
+    }else{
+      ids.forEach(id=>{const s=S.students.find(x=>x.id===id);if(s)s.kelas=target;});
+      renderList();
+    }
+    toast(`✅ ${ids.length} siswa dipindahkan ke kelas ${target}`);
+    batalPilih();
+  }catch(e){toast('Gagal update: '+e.message,'err');}finally{hideOv();}
+}
+async function hapusMassal(){
+  if(!selectedIds.size){toast('Pilih siswa dulu','err');return;}
+  if(!confirm(`Hapus PERMANEN ${selectedIds.size} siswa terpilih? Data yang sudah lulus, aksi ini tidak bisa dibatalkan.`))return;
+  showOv(`Menghapus ${selectedIds.size} siswa...`);
+  try{
+    const ids=[...selectedIds];
+    if(SB){
+      const{error}=await SB.from('siswa').delete().in('id',ids);
+      if(error)throw error;
+      await loadFromDB();
+    }else{
+      S.students=S.students.filter(s=>!ids.includes(s.id));
+      document.getElementById('sbcnt').textContent=S.students.length;
+      renderList();fillSel();
+    }
+    toast(`🗑 ${ids.length} siswa berhasil dihapus`);
+    batalPilih();
+  }catch(e){toast('Gagal hapus: '+e.message,'err');}finally{hideOv();}
 }
 
+function openFormModal(mode){
+  document.getElementById('formModal').classList.add('on');
+  document.getElementById('formTabs').style.display='flex';
+  if(mode==='new'){resetForm();document.getElementById('formModalTitle').textContent='+ Tambah Siswa';setMode('single');}
+  else if(mode==='excel'){document.getElementById('formModalTitle').textContent='📊 Import Excel';setMode('excel');}
+  else if(mode==='edit'){document.getElementById('formModalTitle').textContent='✏ Edit Data Siswa';document.getElementById('formTabs').style.display='none';setMode('single');}
+}
+function closeFormModal(){document.getElementById('formModal').classList.remove('on');}
 function setMode(m){document.getElementById('ds').style.display=m==='single'?'block':'none';document.getElementById('de').style.display=m==='excel'?'block':'none';document.getElementById('ms').classList.toggle('on',m==='single');document.getElementById('me').classList.toggle('on',m==='excel');}
 
 async function importXL(inp){
@@ -1098,12 +1213,14 @@ async function importXL(inp){
       hideOv();
       await loadFromDB();
       toast(`✅ ${updated} data diperbarui, ${inserted} siswa baru ditambahkan`);
+      closeFormModal();
     }else{
       rowsData.forEach(s=>{s.id=uid();S.students.push(s);});
       document.getElementById('sbcnt').textContent=S.students.length;
       renderList();fillSel();
       hideOv();
       toast(`${rowsData.length} siswa berhasil diimport ✅`);
+      closeFormModal();
     }
   }catch(e){
     hideOv();
@@ -1155,7 +1272,7 @@ function buildPrevHTML(student,w,h,side){
     const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
     const COLX=15;
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const wrapStyle=p.maxW?`width:${p.maxW}%;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};${wrapStyle}">${text}</div>`;};
-    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const valW=p.maxW?p.maxW-COLX:null;const valStyle=valW?`width:${valW}%;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="width:${COLX}%;flex-shrink:0">${label} :</span><span style="${valStyle}">${value}</span></div>`;};
+    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;width:${boxW}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="width:${COLX}%;flex-shrink:0">${label} :</span><span style="width:${valW}%;white-space:normal;line-height:1.35">${value}</span></div>`;};
     const ss=S.settings;
     html+=tx('nama',student.nama);html+=txLV('nisNisn','NIS/NISN',student.nisNisn);html+=txLV('kelas','Kelas',student.kelas||'');html+=txLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);html+=txLV('ttl','Tempat Lahir',student.ttl);html+=txLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));html+=txLV('alamat','Alamat',student.alamat);html+=txLV('golDarah','Gol. Darah',student.golDarah);html+=txLV('noHp','No. HP/WA',student.noHp);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
     const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y}%;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y+5}%;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
