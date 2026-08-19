@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <style>
 :root{
   --g900:#0d4d25;--g800:#155f32;--g700:#1a7a3d;--g600:#1e8f47;
@@ -158,6 +160,15 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 #photoModal .pmclose{position:absolute;top:22px;right:26px;color:#fff;font-size:26px;cursor:pointer;background:rgba(255,255,255,.15);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 #photoModal .pmclose:hover{background:rgba(255,255,255,.28)}
 .tph{cursor:zoom-in}
+.cropmodal{position:fixed;inset:0;background:rgba(13,30,20,.88);z-index:1200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.cropmodal.on{display:flex}
+.cropbox{background:#fff;border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.cropbox-t{font-weight:700;font-size:15px;margin-bottom:4px;color:var(--txt)}
+.cropbox-h{font-size:12px;color:var(--txt3);margin-bottom:12px}
+.cropimg-wrap{max-height:55vh;overflow:hidden;border-radius:10px;background:#1a1a1a}
+.cropimg-wrap img{display:block;max-width:100%}
+.cropbox-actions{display:flex;gap:10px;margin-top:14px}
+.cropbox-actions .btn{flex:1}
 #overlay.on{display:flex}
 .spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -339,6 +350,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
             <div style="flex:1">
               <div id="phl" style="font-weight:700;color:var(--gold-dark);font-size:13px">📸 Upload Foto</div>
               <div style="color:var(--txt3);font-size:11px">Pilih Upload File atau Link URL di bawah</div>
+              <button type="button" class="btn bgy bsm" style="margin-top:6px;padding:4px 10px" onclick="recropCurrent()">✂️ Crop Ulang</button>
             </div>
           </div>
           <div class="stabs" style="margin-bottom:10px">
@@ -379,6 +391,8 @@ input[type=range]{width:100%;accent-color:var(--g600)}
             <div class="uz-s">.xlsx / .xls / .csv</div></label>
           <div class="ibox"><div class="ibox-t">Format Kolom</div>Nama | NIS/NISN | Kelas | Jenis Kelamin | Tempat Lahir | Tanggal Lahir (YYYY-MM-DD) | Alamat | Golongan Darah | No HP | No Kartu RFID | Berlaku Sampai | Link Foto <span style="color:var(--txt3)">(opsional, harus link publik)</span></div>
           <button class="btn bout bl bsm" onclick="dlXLT()">📥 Download Template Excel</button>
+          <button class="btn bg bl bsm" onclick="dlExportXL()" style="margin-top:6px">📤 Export Semua Data Siswa (buat edit massal)</button>
+          <div class="ibox" style="margin-top:8px"><div class="ibox-t">💡 Tips edit massal</div>Export dulu data yang sekarang, edit di Excel (nomor ID jangan diubah/dihapus), lalu import lagi file yang sama — data dengan ID yang cocok otomatis DIPERBARUI, bukan bikin duplikat baru.</div>
         </div>
       </div>
     </div>
@@ -532,6 +546,17 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <div id="qrw" style="position:fixed;left:-9999px;top:0;visibility:hidden;width:128px;height:128px"></div>
 <div id="overlay"><div class="spinner"></div><div id="ovmsg" style="font-size:16px;font-weight:700"></div><div id="ovd" style="font-size:13px;opacity:.7"></div></div>
 <div id="photoModal" onclick="closePhotoModal()"><div class="pmclose" onclick="closePhotoModal()">✕</div><img id="pmimg" src="" onclick="event.stopPropagation()"></div>
+<div id="cropModal" class="cropmodal">
+  <div class="cropbox">
+    <div class="cropbox-t">✂️ Sesuaikan Foto</div>
+    <div class="cropbox-h">Geser & perbesar/kecilkan area foto, lalu klik Gunakan.</div>
+    <div class="cropimg-wrap"><img id="cropImg"></div>
+    <div class="cropbox-actions">
+      <button class="btn bgy bsm" onclick="cancelCrop()">Batal</button>
+      <button class="btn bg bsm" onclick="confirmCrop()">✅ Gunakan Foto Ini</button>
+    </div>
+  </div>
+</div>
 <div id="tw"></div>
 
 <script>
@@ -711,8 +736,8 @@ function toast(msg,type='ok'){
   t.textContent=msg;document.getElementById('tw').appendChild(t);
   setTimeout(()=>{t.style.cssText+='opacity:0;transform:translateX(120%);transition:all .3s';setTimeout(()=>t.remove(),300);},2800);
 }
-async function compress(file){
-  const src=await readF(file);
+async function compress(file){const src=await readF(file);return compressDataUrl(src);}
+function compressDataUrl(src){
   return new Promise(r=>{
     const img=new Image();img.onload=()=>{
       let w=img.width,h=img.height;const mw=S.settings.maxW,mh=S.settings.maxH;
@@ -721,6 +746,36 @@ async function compress(file){
       r(cv.toDataURL('image/jpeg',S.settings.quality));
     };img.src=src;
   });
+}
+let cropper=null,cropCallback=null;
+function openCropModal(dataUrl,onConfirm){
+  const img=document.getElementById('cropImg');
+  img.crossOrigin='anonymous';
+  img.src=dataUrl;
+  document.getElementById('cropModal').classList.add('on');
+  cropCallback=onConfirm;
+  const p=(S.layout&&S.layout.photo)?S.layout.photo:{w:22,h:55};
+  const ratio=(p.w/100*CW)/(p.h/100*CH)||0.63;
+  if(cropper){cropper.destroy();cropper=null;}
+  setTimeout(()=>{cropper=new Cropper(img,{aspectRatio:ratio,viewMode:1,autoCropArea:1,background:false,movable:true,zoomable:true});},60);
+}
+function cancelCrop(){
+  document.getElementById('cropModal').classList.remove('on');
+  if(cropper){cropper.destroy();cropper=null;}
+  cropCallback=null;
+}
+function confirmCrop(){
+  if(!cropper)return;
+  try{
+    const cv=cropper.getCroppedCanvas({width:600,imageSmoothingQuality:'high'});
+    const dataUrl=cv.toDataURL('image/jpeg',.92);
+    document.getElementById('cropModal').classList.remove('on');
+    cropper.destroy();cropper=null;
+    const cb=cropCallback;cropCallback=null;
+    if(cb)cb(dataUrl);
+  }catch(e){
+    toast('Gagal crop: foto dari link ini tidak mengizinkan proses crop (batasan keamanan situs sumbernya). Coba upload file langsung.','err');
+  }
 }
 function showOv(m){document.getElementById('ovmsg').textContent=m;document.getElementById('ovd').textContent='';document.getElementById('overlay').classList.add('on');}
 function updOv(d){document.getElementById('ovd').textContent=d;}
@@ -890,7 +945,24 @@ function pickPhotoLink(url){
   document.getElementById('pht').innerHTML=`<img src="${url}" onerror="this.parentElement.innerHTML='⚠️';document.getElementById('phl').textContent='⚠️ Link tidak valid/tidak bisa dimuat';" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
   document.getElementById('phl').textContent='✅ Link foto terpasang';
 }
-async function pickPhoto(inp){const f=inp.files[0];if(!f)return;S.curPhoto=await compress(f);document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;document.getElementById('phl').textContent='✅ Foto terupload';}
+function recropCurrent(){
+  if(!S.curPhoto){toast('Belum ada foto untuk di-crop','err');return;}
+  openCropModal(S.curPhoto,async(cropped)=>{
+    S.curPhoto=await compressDataUrl(cropped);
+    document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
+    document.getElementById('phl').textContent='✅ Foto terupload';
+  });
+}
+async function pickPhoto(inp){
+  const f=inp.files[0];if(!f)return;
+  const raw=await readF(f);
+  openCropModal(raw,async(cropped)=>{
+    S.curPhoto=await compressDataUrl(cropped);
+    document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
+    document.getElementById('phl').textContent='✅ Foto terupload';
+  });
+  inp.value='';
+}
 
 async function saveSiswa(){
   const eid=gv('fid');
@@ -984,9 +1056,9 @@ async function importXL(inp){
     if(rows.length<2){hideOv();toast('File kosong atau format salah — pastikan baris pertama adalah judul kolom','err');return;}
     const h=rows[0].map(x=>(x||'').toString().toLowerCase());
     const fc=(...ns)=>{for(const n of ns){const i=h.findIndex(x=>x.includes(n));if(i>-1)return i;}return -1;};
-    const cols={nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('tempat lahir','tempat','ttl'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid'),photoLink:fc('link foto','foto url','link photo','photo')};
+    const cols={id:fc('id'),nama:fc('nama'),nisNisn:fc('nis'),kelas:fc('kelas'),jenisKelamin:fc('jenis','jk'),ttl:fc('tempat lahir','tempat','ttl'),tanggalLahir:fc('tanggal lahir','tgl lahir'),alamat:fc('alamat'),golDarah:fc('gol','darah'),noHp:fc('hp','wa'),noRfid:fc('rfid'),berlakuSampai:fc('berlaku','valid'),photoLink:fc('link foto','foto url','link photo','photo')};
     if(cols.nama===-1){hideOv();toast('Kolom "Nama" tidak ditemukan di file. Pakai template resmi ya.','err');return;}
-    const newStudents=[];
+    const rowsData=[];
     for(let i=1;i<rows.length;i++){
       const row=rows[i];const g=c=>c>-1?(row[c]===undefined||row[c]===null?'':row[c]).toString().trim():'';
       if(!g(cols.nama))continue;
@@ -995,23 +1067,44 @@ async function importXL(inp){
         const d=XLSX.SSF.parse_date_code(Number(tgl));
         if(d)tgl=`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
       }
-      newStudents.push({nama:g(cols.nama),nisNisn:g(cols.nisNisn),kelas:g(cols.kelas),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),tanggalLahir:tgl,alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),noRfid:g(cols.noRfid),berlakuSampai:g(cols.berlakuSampai),photo:g(cols.photoLink)||null});
+      rowsData.push({id:g(cols.id),nama:g(cols.nama),nisNisn:g(cols.nisNisn),kelas:g(cols.kelas),jenisKelamin:g(cols.jenisKelamin)||'Laki-laki',ttl:g(cols.ttl),tanggalLahir:tgl,alamat:g(cols.alamat),golDarah:g(cols.golDarah)||'A',noHp:g(cols.noHp),noRfid:g(cols.noRfid),berlakuSampai:g(cols.berlakuSampai),photo:g(cols.photoLink)||null});
     }
-    if(!newStudents.length){hideOv();toast('Tidak ada baris dengan Nama terisi di file ini','err');return;}
+    if(!rowsData.length){hideOv();toast('Tidak ada baris dengan Nama terisi di file ini','err');return;}
     if(SB){
-      updOv(`Import ${newStudents.length} siswa ke database...`);
-      const recs=newStudents.map(s=>({nama:s.nama,nis_nisn:s.nisNisn,kelas:s.kelas,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,tanggal_lahir:s.tanggalLahir||null,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai,photo_url:s.photo||null}));
-      const{error}=await SB.from('siswa').insert(recs);
+      // Pisahkan: baris yang cocok dengan data lama (via ID atau NIS/NISN) → UPDATE. Sisanya → INSERT baru.
+      const byId={};S.students.forEach(s=>{byId[s.id]=s;});
+      const byNis={};S.students.forEach(s=>{if(s.nisNisn)byNis[s.nisNisn]=s;});
+      const toInsert=[];let updated=0,inserted=0;
+      for(let i=0;i<rowsData.length;i++){
+        const r=rowsData[i];
+        const existing=(r.id&&byId[r.id])?byId[r.id]:(r.nisNisn&&byNis[r.nisNisn]?byNis[r.nisNisn]:null);
+        const rec={nama:r.nama,nis_nisn:r.nisNisn,kelas:r.kelas,jenis_kelamin:r.jenisKelamin,ttl:r.ttl,tanggal_lahir:r.tanggalLahir||null,alamat:r.alamat,gol_darah:r.golDarah,no_hp:r.noHp,no_rfid:r.noRfid,berlaku_sampai:r.berlakuSampai};
+        if(r.photo)rec.photo_url=r.photo;
+        if(existing){
+          updOv(`Update ${i+1}/${rowsData.length} — ${r.nama}`);
+          const{error}=await SB.from('siswa').update(rec).eq('id',existing.id);
+          if(!error)updated++;
+        }else{
+          if(!rec.photo_url)rec.photo_url=null;
+          toInsert.push(rec);
+        }
+      }
+      if(toInsert.length){
+        updOv(`Menambah ${toInsert.length} siswa baru...`);
+        const{error}=await SB.from('siswa').insert(toInsert);
+        if(error){hideOv();toast('Sebagian gagal disimpan: '+error.message,'err');return;}
+        inserted=toInsert.length;
+      }
       hideOv();
-      if(error){toast('Gagal import: '+error.message,'err');return;}
       await loadFromDB();
+      toast(`✅ ${updated} data diperbarui, ${inserted} siswa baru ditambahkan`);
     }else{
-      newStudents.forEach(s=>{s.id=uid();S.students.push(s);});
+      rowsData.forEach(s=>{s.id=uid();S.students.push(s);});
       document.getElementById('sbcnt').textContent=S.students.length;
       renderList();fillSel();
       hideOv();
+      toast(`${rowsData.length} siswa berhasil diimport ✅`);
     }
-    toast(`${newStudents.length} siswa berhasil diimport ✅`);
   }catch(e){
     hideOv();
     toast('Gagal membaca file Excel: '+e.message,'err');
@@ -1019,6 +1112,15 @@ async function importXL(inp){
   inp.value='';
 }
 
+function dlExportXL(){
+  if(!S.students.length){toast('Belum ada data siswa untuk di-export','err');return;}
+  const h=['ID (jangan diubah)','Nama','NIS/NISN','Kelas','Jenis Kelamin','Tempat Lahir','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];
+  const rows=S.students.map(s=>[s.id,s.nama,s.nisNisn,s.kelas||'',s.jenisKelamin||'',s.ttl||'',s.tanggalLahir||'',s.alamat||'',s.golDarah||'',s.noHp||'',s.noRfid||'',s.berlakuSampai||'',s.photo||'']);
+  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');
+  XLSX.writeFile(wb,`export-data-siswa-${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`${S.students.length} data siswa berhasil di-export ✅`);
+}
 function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','Tempat Lahir','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','Hulu Sungai Selatan','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
@@ -1033,10 +1135,12 @@ async function renderCard(student,canvas,side){
   if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   if(!L.qrCode.hidden){const qrURL=await getQR(student);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(S.ttdImg&&!L.ttdImg.hidden){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
+  const COLX=15;
   const wrapText=(text,maxPx)=>{const words=text.split(' ');const lines=[];let cur='';for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxPx&&cur){lines.push(cur);cur=w;}else cur=test;}if(cur)lines.push(cur);return lines;};
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';if(p.maxW){const lines=wrapText(text,p.maxW/100*CW);const lh=p.fs*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,p.x/100*CW,p.y/100*CH+i*lh));}else{ctx.fillText(text,p.x/100*CW,p.y/100*CH);}};
+  const dtLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs}px Arial`;ctx.fillStyle=p.col||'#222';const x=p.x/100*CW,y=p.y/100*CH,colonX=x+COLX/100*CW,valX=colonX+8;ctx.fillText(label,x,y);ctx.fillText(':',colonX,y);if(p.maxW){const availPx=(p.x+p.maxW)/100*CW-valX;const lines=wrapText(value,availPx);const lh=p.fs*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,valX,y+i*lh));}else{ctx.fillText(value,valX,y);}};
   const ss=S.settings;
-  dt('nama',student.nama);dt('nisNisn',`NIS/NISN      : ${student.nisNisn}`);dt('kelas',`Kelas             : ${student.kelas||''}`);dt('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);dt('ttl',`Tempat Lahir   : ${student.ttl}`);dt('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);dt('alamat',`Alamat          : ${student.alamat}`);dt('golDarah',`Gol. Darah    : ${student.golDarah}`);dt('noHp',`No. HP/WA    : ${student.noHp}`);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
+  dt('nama',student.nama);dtLV('nisNisn','NIS/NISN',student.nisNisn);dtLV('kelas','Kelas',student.kelas||'');dtLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);dtLV('ttl','Tempat Lahir',student.ttl);dtLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));dtLV('alamat','Alamat',student.alamat);dtLV('golDarah','Gol. Darah',student.golDarah);dtLV('noHp','No. HP/WA',student.noHp);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
   const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
 }
 
@@ -1049,9 +1153,11 @@ function buildPrevHTML(student,w,h,side){
     const pp=L.photo;if(student.photo&&!pp.hidden)html+=`<img src="${student.photo}" style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else if(!pp.hidden)html+=`<div style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
     const qp=L.qrCode;if(!qp.hidden)html+=`<div style="position:absolute;left:${qp.x}%;top:${qp.y}%;width:${qp.w}%;height:${qp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
     const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
+    const COLX=15;
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const wrapStyle=p.maxW?`width:${p.maxW}%;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};${wrapStyle}">${text}</div>`;};
+    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const valW=p.maxW?p.maxW-COLX:null;const valStyle=valW?`width:${valW}%;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="width:${COLX}%;flex-shrink:0">${label} :</span><span style="${valStyle}">${value}</span></div>`;};
     const ss=S.settings;
-    html+=tx('nama',student.nama);html+=tx('nisNisn',`NIS/NISN      : ${student.nisNisn}`);html+=tx('kelas',`Kelas             : ${student.kelas||''}`);html+=tx('jenisKelamin',`Jenis Kelamin : ${student.jenisKelamin}`);html+=tx('ttl',`Tempat Lahir   : ${student.ttl}`);html+=tx('tanggalLahir',`Tanggal Lahir  : ${fmtTglLahir(student.tanggalLahir)}`);html+=tx('alamat',`Alamat          : ${student.alamat}`);html+=tx('golDarah',`Gol. Darah    : ${student.golDarah}`);html+=tx('noHp',`No. HP/WA    : ${student.noHp}`);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
+    html+=tx('nama',student.nama);html+=txLV('nisNisn','NIS/NISN',student.nisNisn);html+=txLV('kelas','Kelas',student.kelas||'');html+=txLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);html+=txLV('ttl','Tempat Lahir',student.ttl);html+=txLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));html+=txLV('alamat','Alamat',student.alamat);html+=txLV('golDarah','Gol. Darah',student.golDarah);html+=txLV('noHp','No. HP/WA',student.noHp);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
     const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y}%;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y+5}%;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
   }
   html+='</div>';return html;
