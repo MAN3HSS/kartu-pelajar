@@ -193,7 +193,7 @@ const SB=supabase.createClient(_SB_URL,_SB_KEY);
 let current=null,cardSide='front',cardURLs={front:null,back:null};
 
 // ══ Mesin render kartu (persis sama dengan yang dipakai di admin.html) ══
-const CW=1011,CH=638;
+const CW=2022,CH=1276;
 const IL={
   photo:{x:3.5,y:22,w:22,h:55},nama:{x:29,y:27,fs:22,bold:true,col:'#1a5c2a'},
   nisNisn:{x:29,y:33,fs:11,bold:false,col:'#333'},kelas:{x:29,y:39,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:45,fs:11,bold:false,col:'#333'},
@@ -207,7 +207,7 @@ const DEFAULT_SETTINGS={namaKepala:'MUHAMMAD TAUFIK',nip:'NIP. 197xxxxxx',labelK
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;i.src=src;});
 function fmtDate(kota){const d=new Date();const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return`${kota}, ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;}
 function fmtTglLahir(iso){if(!iso)return'';const m=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];const[y,mo,d]=iso.split('-');if(!y||!mo||!d)return iso;return`${+d} ${m[+mo-1]} ${y}`;}
-function getQR(s,ss){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
+function getQR(s,ss){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:300,height:300,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 
 async function renderCard(student,canvas,side,ctxData){
   const{layout:L,tmplFront,tmplBack,settings:ss,ttdImg}=ctxData;
