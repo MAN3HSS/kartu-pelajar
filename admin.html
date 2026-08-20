@@ -571,6 +571,22 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <div id="qrw" style="position:fixed;left:-9999px;top:0;visibility:hidden;width:128px;height:128px"></div>
 <div id="overlay"><div class="spinner"></div><div id="ovmsg" style="font-size:16px;font-weight:700"></div><div id="ovd" style="font-size:13px;opacity:.7"></div></div>
 <div id="photoModal" onclick="closePhotoModal()"><div class="pmclose" onclick="closePhotoModal()">✕</div><img id="pmimg" src="" onclick="event.stopPropagation()"></div>
+<div id="viewCardModal" class="cropmodal" onclick="if(event.target===this)closeViewCard()">
+  <div class="cropbox" style="max-width:460px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="cropbox-t" id="viewCardTitle" style="margin-bottom:0">Kartu Siswa</div>
+      <div class="pmclose" style="position:static;width:32px;height:32px;font-size:16px;background:var(--g50);color:var(--txt2)" onclick="closeViewCard()">✕</div>
+    </div>
+    <div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--g50);aspect-ratio:85.6/54;display:flex;align-items:center;justify-content:center">
+      <img id="viewCardImg" style="width:100%;height:100%;object-fit:contain;transition:opacity .15s">
+    </div>
+    <div class="cropbox-actions">
+      <button class="btn bgy bsm" id="viewCardFlip" onclick="flipViewCard()">🔄 Lihat Belakang</button>
+      <button class="btn bb bsm" onclick="editFromViewCard()">✏ Edit</button>
+      <button class="btn bg bsm" onclick="dlFromViewCard()">⬇️ Download</button>
+    </div>
+  </div>
+</div>
 <div id="cropModal" class="cropmodal">
   <div class="cropbox">
     <div class="cropbox-t">✂️ Sesuaikan Foto</div>
@@ -1119,6 +1135,7 @@ function renderList(){
     const ph=s.photo?`<img src="${s.photo}" class="tph" onclick="event.stopPropagation();showPhotoModal('${s.photo.replace(/'/g,"\\'")}')" onerror="this.style.display='none'">`:'<div class="tnph">👤</div>';
     tr.innerHTML=`<td onclick="event.stopPropagation()"><input type="checkbox" class="chkrow" data-id="${s.id}" ${selectedIds.has(s.id)?'checked':''} onchange="toggleChk('${s.id}',this)"></td><td style="color:var(--txt3);font-size:11px">${i+1}</td><td>${ph}</td><td style="font-weight:600">${s.nama}</td><td style="font-family:monospace;font-size:12px">${s.nisNisn}</td><td>${s.kelas?`<span class="badge bg2" style="font-size:10px;padding:2px 8px">${s.kelas}</span>`:'<span style="color:var(--txt3);font-size:11px">—</span>'}</td><td>${s.jenisKelamin}</td><td>${s.photo?'<span style="color:var(--g600);font-weight:700">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
     <td style="white-space:nowrap" onclick="event.stopPropagation()">
+      <button onclick="event.stopPropagation();lihatKartu('${s.id}')" class="btn bsm" style="background:#e3f2fd;color:var(--blue);border:1px solid #90caf9;padding:4px 9px;font-size:11px">👁</button>
       <button onclick="hapusSiswa('${s.id}')" class="btn bsm" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2;padding:4px 9px;font-size:11px">🗑</button>
       <button onclick="qdl('${s.id}')" class="btn bsm" style="background:var(--g50);color:var(--g700);border:1px solid var(--g300);padding:4px 9px;font-size:11px">📥</button>
     </td>`;
@@ -1281,7 +1298,7 @@ async function renderCard(student,canvas,side){
   if(student.photo&&!L.photo.hidden){try{const p=L.photo;const img=await loadImg(student.photo);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}catch(e){}}
   if(!L.qrCode.hidden){const qrURL=await getQR(student);if(qrURL){const p=L.qrCode;const img=await loadImg(qrURL);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}}
   if(S.ttdImg&&!L.ttdImg.hidden){const p=L.ttdImg;const img=await loadImg(S.ttdImg);ctx.drawImage(img,p.x/100*CW,p.y/100*CH,p.w/100*CW,p.h/100*CH);}
-  const COLX=15;
+  const COLX=17;
   const wrapText=(text,maxPx)=>{const words=text.split(' ');const lines=[];let cur='';for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxPx&&cur){lines.push(cur);cur=w;}else cur=test;}if(cur)lines.push(cur);return lines;};
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs*RES_SCALE}px Arial`;ctx.fillStyle=p.col||'#222';if(p.maxW){const lines=wrapText(text,p.maxW/100*CW);const lh=p.fs*RES_SCALE*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,p.x/100*CW,p.y/100*CH+i*lh));}else{ctx.fillText(text,p.x/100*CW,p.y/100*CH);}};
   const dtLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs*RES_SCALE}px Arial`;ctx.fillStyle=p.col||'#222';const x=p.x/100*CW,y=p.y/100*CH,colonX=x+COLX/100*CW,valX=colonX+8*RES_SCALE;ctx.fillText(label,x,y);ctx.fillText(':',colonX,y);if(p.maxW){const availPx=(p.x+p.maxW)/100*CW-valX;const lines=wrapText(value,availPx);const lh=p.fs*RES_SCALE*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,valX,y+i*lh));}else{ctx.fillText(value,valX,y);}};
@@ -1299,9 +1316,9 @@ function buildPrevHTML(student,w,h,side){
     const pp=L.photo;if(student.photo&&!pp.hidden)html+=`<img src="${student.photo}" style="position:absolute;left:${(pp.x/100*w).toFixed(1)}px;top:${(pp.y/100*h).toFixed(1)}px;width:${(pp.w/100*w).toFixed(1)}px;height:${(pp.h/100*h).toFixed(1)}px;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else if(!pp.hidden)html+=`<div style="position:absolute;left:${(pp.x/100*w).toFixed(1)}px;top:${(pp.y/100*h).toFixed(1)}px;width:${(pp.w/100*w).toFixed(1)}px;height:${(pp.h/100*h).toFixed(1)}px;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
     const qp=L.qrCode;if(!qp.hidden)html+=`<div style="position:absolute;left:${(qp.x/100*w).toFixed(1)}px;top:${(qp.y/100*h).toFixed(1)}px;width:${(qp.w/100*w).toFixed(1)}px;height:${(qp.h/100*h).toFixed(1)}px;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
     const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${(tp.x/100*w).toFixed(1)}px;top:${(tp.y/100*h).toFixed(1)}px;width:${(tp.w/100*w).toFixed(1)}px;height:${(tp.h/100*h).toFixed(1)}px;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${(tp.x/100*w).toFixed(1)}px;top:${(tp.y/100*h).toFixed(1)}px;width:${(tp.w/100*w).toFixed(1)}px;height:${(tp.h/100*h).toFixed(1)}px;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
-    const COLX=15;
+    const COLX=17;
     const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const wrapStyle=p.maxW?`width:${(p.maxW/100*w).toFixed(1)}px;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};${wrapStyle}">${text}</div>`;};
-    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;const colPx=(COLX/100*w).toFixed(1),valPx=(valW/100*w).toFixed(1);const valStyle=p.maxW?`flex:0 0 ${valPx}px;width:${valPx}px;white-space:normal;line-height:1.35`:`white-space:nowrap`;return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="flex:0 0 ${colPx}px;width:${colPx}px">${label} :</span><span style="${valStyle}">${value}</span></div>`;};
+    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;const colPx=(COLX/100*w).toFixed(1),valPx=(valW/100*w).toFixed(1);const valStyle=p.maxW?`flex:0 0 ${valPx}px;width:${valPx}px;white-space:normal;line-height:1.35`:`white-space:nowrap`;return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="flex:0 0 ${colPx}px;width:${colPx}px;min-width:0;max-width:${colPx}px;overflow:hidden;white-space:nowrap;text-overflow:clip">${label} :</span><span style="${valStyle}">${value}</span></div>`;};
     const ss=S.settings;
     html+=tx('nama',student.nama);html+=txLV('nisNisn','NIS/NISN',student.nisNisn);html+=txLV('kelas','Kelas',student.kelas||'');html+=txLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);html+=txLV('ttl','Tempat Lahir',student.ttl);html+=txLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));html+=txLV('alamat','Alamat',student.alamat);html+=txLV('golDarah','Gol. Darah',student.golDarah);html+=txLV('noHp','No. HP/WA',student.noHp);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
     const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${(pb.y/100*h).toFixed(1)}px;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${((pb.y+5)/100*h).toFixed(1)}px;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
@@ -1374,6 +1391,33 @@ async function cetakMassalGrid(side){
     hideOv();
   }
 }
+let viewCardStudent=null,viewCardSide='front';
+async function lihatKartu(id){
+  const s=S.students.find(x=>x.id===id);if(!s)return;
+  viewCardStudent=s;viewCardSide='front';
+  document.getElementById('viewCardModal').classList.add('on');
+  document.getElementById('viewCardTitle').textContent=s.nama;
+  await renderViewCard();
+}
+async function renderViewCard(){
+  const img=document.getElementById('viewCardImg');
+  img.style.opacity='.3';
+  const cv=document.getElementById('cv');
+  await renderCard(viewCardStudent,cv,viewCardSide);
+  img.src=cv.toDataURL('image/png');
+  img.style.opacity='1';
+  document.getElementById('viewCardFlip').textContent=viewCardSide==='front'?'🔄 Lihat Belakang':'🔄 Lihat Depan';
+}
+function flipViewCard(){viewCardSide=viewCardSide==='front'?'back':'front';renderViewCard();}
+function dlFromViewCard(){
+  const a=document.createElement('a');
+  a.download=`kartu-${viewCardSide}-${viewCardStudent.nama.replace(/\s+/g,'-').toLowerCase()}.png`;
+  a.href=document.getElementById('viewCardImg').src;
+  a.click();
+  toast(`${viewCardStudent.nama} diunduh ✅`);
+}
+function editFromViewCard(){closeViewCard();editSiswa(viewCardStudent.id);}
+function closeViewCard(){document.getElementById('viewCardModal').classList.remove('on');viewCardStudent=null;}
 async function qdl(id){const s=S.students.find(x=>x.id===id);if(!s)return;showOv('Membuat kartu...');const cv=document.getElementById('cv');await renderCard(s,cv,'front');const a=document.createElement('a');a.download=`kartu-${s.nama.replace(/\s+/g,'-').toLowerCase()}.png`;a.href=cv.toDataURL('image/png');a.click();hideOv();toast(`${s.nama} diunduh ✅`);}
 
 // ═══ SETTINGS ═══
