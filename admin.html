@@ -991,7 +991,7 @@ document.addEventListener('keydown',e=>{
 });
 function toggleLock(){S.locked=!S.locked;document.getElementById('btnlock').textContent=S.locked?'🔓 Buka Kunci':'🔒 Kunci Layout';document.getElementById('ebadge').textContent=S.locked?'🔒 Terkunci':'✏️ Mode Edit';document.getElementById('ebadge').style.background=S.locked?'#fff3e0':'var(--g100)';document.getElementById('ebadge').style.color=S.locked?'var(--orange)':'var(--g800)';document.getElementById('ehint').textContent=S.locked?'Terkunci. Klik "Buka Kunci" untuk edit.':'💡 Drag chip untuk pindah. Klik untuk edit properti.';document.getElementById('lockbadge').style.display=S.locked?'block':'none';if(S.sel)selField(S.sel);renderChips();toast(S.locked?'Layout dikunci 🔒':'Layout dibuka 🔓',S.locked?'warn':'ok');}
 function renderChips(){
-  buildLists();const chips=document.getElementById('chips');chips.innerHTML='';const L=S.layout,sc=DW/CW;
+  buildLists();const chips=document.getElementById('chips');chips.innerHTML='';const L=S.layout,sc=DW/CW_BASE;
   FIELDS.filter(f=>f.type==='img').forEach(f=>{
     const p=L[f.id];if(!p||p.w===undefined)return;
     const box=document.createElement('div');box.className='ebox'+(p.hidden?' hidden-field':'');
