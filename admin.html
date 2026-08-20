@@ -308,6 +308,10 @@ input[type=range]{width:100%;accent-color:var(--g600)}
         <div id="rfs"><label class="fl">Font Size (px)</label><input type="number" class="fi" id="pfs" min="6" max="80" oninput="updProp('fs',+this.value)" style="margin-bottom:10px"></div>
         <div id="rcol"><label class="fl">Warna</label><input type="color" class="fi" id="pcol" oninput="updProp('col',this.value)" style="margin-bottom:10px"></div>
         <div id="rbold"><label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--txt2);cursor:pointer;margin-bottom:10px"><input type="checkbox" id="pbold" onchange="updProp('bold',this.checked)" style="accent-color:var(--g600)"> Tebal (Bold)</label></div>
+        <div id="rwrap" style="display:none;margin-bottom:10px">
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--txt2);cursor:pointer;margin-bottom:6px"><input type="checkbox" id="pwrapon" onchange="updProp('wrapon',this.checked)" style="accent-color:var(--g600)"> Turun baris otomatis (buat teks panjang, misal Alamat)</label>
+          <div id="rwrapw" style="display:none"><label class="fl">Lebar sebelum turun baris (%)</label><input type="number" class="fi" id="pwrapw" min="10" max="97" step="1" oninput="updProp('maxW',+this.value)"></div>
+        </div>
         <div id="rsz" style="display:none"><div class="g2"><div><label class="fl">Lebar (%)</label><input type="number" class="fi" id="pw" min="1" max="99" step="0.5" oninput="updProp('w',+this.value)"></div><div><label class="fl">Tinggi (%)</label><input type="number" class="fi" id="ph" min="1" max="99" step="0.5" oninput="updProp('h',+this.value)"></div></div></div>
         <div style="font-size:10px;color:var(--txt3);margin-top:4px;font-family:monospace" id="ppos"></div>
         <button class="btn bgy bsm" id="btnhide" onclick="toggleFieldHidden(S.sel)" style="width:100%;margin-top:10px">👁 Sembunyikan dari Kartu</button>
@@ -581,7 +585,7 @@ input[type=range]{width:100%;accent-color:var(--g600)}
 <div id="tw"></div>
 
 <script>
-const CW=1011,CH=638,DW=740,DH=Math.round(740*CH/CW);
+const CW=2022,CH=1276,DW=740,DH=Math.round(740*CH/CW);
 // ══ Dropdown Tanggal (dd/mm/yyyy) — supaya tidak tergantung format bawaan browser ══
 const BULAN_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function buildDateSelects(pfx,minY,maxY){
@@ -912,13 +916,28 @@ function selField(id){
   const hasT=L.fs!==undefined,hasS=L.w!==undefined;
   document.getElementById('rfs').style.display=hasT?'block':'none';document.getElementById('rcol').style.display=hasT?'block':'none';
   document.getElementById('rbold').style.display=hasT?'block':'none';document.getElementById('rsz').style.display=hasS?'block':'none';
-  if(hasT){const pf=document.getElementById('pfs');pf.value=L.fs;pf.disabled=S.locked;const pc=document.getElementById('pcol');pc.value=L.col;pc.disabled=S.locked;const pb2=document.getElementById('pbold');pb2.checked=!!L.bold;pb2.disabled=S.locked;}
+  document.getElementById('rwrap').style.display=hasT?'block':'none';
+  if(hasT){const pf=document.getElementById('pfs');pf.value=L.fs;pf.disabled=S.locked;const pc=document.getElementById('pcol');pc.value=L.col;pc.disabled=S.locked;const pb2=document.getElementById('pbold');pb2.checked=!!L.bold;pb2.disabled=S.locked;
+    const pwo=document.getElementById('pwrapon');pwo.checked=L.maxW!==undefined;pwo.disabled=S.locked;
+    document.getElementById('rwrapw').style.display=L.maxW!==undefined?'block':'none';
+    const pww=document.getElementById('pwrapw');pww.value=L.maxW!==undefined?L.maxW:Math.max(10,95-L.x).toFixed(0);pww.disabled=S.locked;
+  }
   if(hasS){const pw=document.getElementById('pw');pw.value=L.w.toFixed(1);pw.disabled=S.locked;const ph=document.getElementById('ph');ph.value=L.h.toFixed(1);ph.disabled=S.locked;}
   document.getElementById('ppos').textContent=`X:${L.x.toFixed(1)}% Y:${L.y.toFixed(1)}%`;
   const bh=document.getElementById('btnhide');bh.textContent=L.hidden?'👁 Tampilkan di Kartu':'🚫 Sembunyikan dari Kartu';bh.className='btn bsm '+(L.hidden?'bg':'bgy');
   renderChips();
 }
-function updProp(k,v){if(!S.sel||S.locked)return;const L=S.layout[S.sel];if(k==='fs')L.fs=parseInt(v)||10;else if(k==='col')L.col=v;else if(k==='bold')L.bold=v;else if(k==='w')L.w=parseFloat(v)||5;else if(k==='h')L.h=parseFloat(v)||5;renderChips();}
+function updProp(k,v){
+  if(!S.sel||S.locked)return;const L=S.layout[S.sel];
+  if(k==='fs')L.fs=parseInt(v)||10;
+  else if(k==='col')L.col=v;
+  else if(k==='bold')L.bold=v;
+  else if(k==='w')L.w=parseFloat(v)||5;
+  else if(k==='h')L.h=parseFloat(v)||5;
+  else if(k==='wrapon'){if(v){L.maxW=Math.max(10,Math.min(97,95-L.x));document.getElementById('rwrapw').style.display='block';document.getElementById('pwrapw').value=L.maxW;}else{delete L.maxW;document.getElementById('rwrapw').style.display='none';}}
+  else if(k==='maxW')L.maxW=Math.max(5,parseFloat(v)||30);
+  renderChips();
+}
 function toggleGrid(){
   S.showGrid=!S.showGrid;
   document.getElementById('btngrid').className='btn bsm '+(S.showGrid?'bg':'bgy');
@@ -1249,7 +1268,7 @@ function dlExportXL(){
 function dlXLT(){const h=['Nama','NIS/NISN','Kelas','Jenis Kelamin','Tempat Lahir','Tanggal Lahir (YYYY-MM-DD)','Alamat','Golongan Darah','No HP/WA','No Kartu RFID','Berlaku Sampai','Link Foto'];const ex=['ANZILIE RAHMA','3083045603','XII IPA 1','Perempuan','Hulu Sungai Selatan','2008-08-10','JL. Tugu 2 Jan 1949','A','081234567890','0004512389','31 JULI 2026','https://i.ibb.co/contoh/foto.jpg'];const ws=XLSX.utils.aoa_to_sheet([h,ex]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Data Siswa');XLSX.writeFile(wb,'template-data-siswa.xlsx');}
 
 // ═══ QR ═══
-async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:128,height:128,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
+async function getQR(s){return new Promise(res=>{const w=document.getElementById('qrw');w.innerHTML='';try{new QRCode(w,{text:s.nisNisn||'',width:300,height:300,correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const cv=w.querySelector('canvas');res(cv?cv.toDataURL('image/png'):null);},150);}catch(e){res(null);}});}
 
 // ═══ RENDER KARTU ═══
 async function renderCard(student,canvas,side){
@@ -1275,15 +1294,15 @@ function buildPrevHTML(student,w,h,side){
   let html=`<div class="pcard" style="width:${w}px;height:${h}px;background:${side==='front'?'#d4f0df':'#e3f2fd'}">`;
   if(tmpl)html+=`<img class="pbg" src="${tmpl}" draggable="false">`;
   if(side==='front'){
-    const pp=L.photo;if(student.photo&&!pp.hidden)html+=`<img src="${student.photo}" style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else if(!pp.hidden)html+=`<div style="position:absolute;left:${pp.x}%;top:${pp.y}%;width:${pp.w}%;height:${pp.h}%;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
-    const qp=L.qrCode;if(!qp.hidden)html+=`<div style="position:absolute;left:${qp.x}%;top:${qp.y}%;width:${qp.w}%;height:${qp.h}%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
-    const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${tp.x}%;top:${tp.y}%;width:${tp.w}%;height:${tp.h}%;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
+    const pp=L.photo;if(student.photo&&!pp.hidden)html+=`<img src="${student.photo}" style="position:absolute;left:${(pp.x/100*w).toFixed(1)}px;top:${(pp.y/100*h).toFixed(1)}px;width:${(pp.w/100*w).toFixed(1)}px;height:${(pp.h/100*h).toFixed(1)}px;object-fit:cover" draggable="false" onerror="this.style.display='none'">`;else if(!pp.hidden)html+=`<div style="position:absolute;left:${(pp.x/100*w).toFixed(1)}px;top:${(pp.y/100*h).toFixed(1)}px;width:${(pp.w/100*w).toFixed(1)}px;height:${(pp.h/100*h).toFixed(1)}px;background:rgba(200,200,200,.3);display:flex;align-items:center;justify-content:center;font-size:${18*sc}px">👤</div>`;
+    const qp=L.qrCode;if(!qp.hidden)html+=`<div style="position:absolute;left:${(qp.x/100*w).toFixed(1)}px;top:${(qp.y/100*h).toFixed(1)}px;width:${(qp.w/100*w).toFixed(1)}px;height:${(qp.h/100*h).toFixed(1)}px;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:${8*sc}px;color:#666;border:1px solid #ddd">▩QR</div>`;
+    const tp=L.ttdImg;if(!tp.hidden){if(S.ttdImg)html+=`<img src="${S.ttdImg}" style="position:absolute;left:${(tp.x/100*w).toFixed(1)}px;top:${(tp.y/100*h).toFixed(1)}px;width:${(tp.w/100*w).toFixed(1)}px;height:${(tp.h/100*h).toFixed(1)}px;object-fit:contain" draggable="false">`;else html+=`<div style="position:absolute;left:${(tp.x/100*w).toFixed(1)}px;top:${(tp.y/100*h).toFixed(1)}px;width:${(tp.w/100*w).toFixed(1)}px;height:${(tp.h/100*h).toFixed(1)}px;background:rgba(200,200,200,.1);border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:${7*sc}px;color:#aaa">ttd</div>`;}
     const COLX=15;
-    const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const wrapStyle=p.maxW?`width:${p.maxW}%;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};${wrapStyle}">${text}</div>`;};
-    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;return`<div class="ptxt" style="left:${p.x}%;top:${p.y}%;width:${boxW}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="width:${COLX}%;flex-shrink:0">${label} :</span><span style="width:${valW}%;white-space:normal;line-height:1.35">${value}</span></div>`;};
+    const tx=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const wrapStyle=p.maxW?`width:${(p.maxW/100*w).toFixed(1)}px;white-space:normal;line-height:1.35`:'';return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};${wrapStyle}">${text}</div>`;};
+    const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;const colPx=(COLX/100*w).toFixed(1),valPx=(valW/100*w).toFixed(1);const valStyle=p.maxW?`flex:0 0 ${valPx}px;width:${valPx}px;white-space:normal;line-height:1.35`:`white-space:nowrap`;return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="flex:0 0 ${colPx}px;width:${colPx}px">${label} :</span><span style="${valStyle}">${value}</span></div>`;};
     const ss=S.settings;
     html+=tx('nama',student.nama);html+=txLV('nisNisn','NIS/NISN',student.nisNisn);html+=txLV('kelas','Kelas',student.kelas||'');html+=txLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);html+=txLV('ttl','Tempat Lahir',student.ttl);html+=txLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));html+=txLV('alamat','Alamat',student.alamat);html+=txLV('golDarah','Gol. Darah',student.golDarah);html+=txLV('noHp','No. HP/WA',student.noHp);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
-    const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y}%;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${pb.x}%;top:${pb.y+5}%;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
+    const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${(pb.y/100*h).toFixed(1)}px;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${((pb.y+5)/100*h).toFixed(1)}px;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
   }
   html+='</div>';return html;
 }
