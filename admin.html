@@ -312,6 +312,16 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--txt2);cursor:pointer;margin-bottom:6px"><input type="checkbox" id="pwrapon" onchange="updProp('wrapon',this.checked)" style="accent-color:var(--g600)"> Turun baris otomatis (buat teks panjang, misal Alamat)</label>
           <div id="rwrapw" style="display:none"><label class="fl">Lebar sebelum turun baris (%)</label><input type="number" class="fi" id="pwrapw" min="10" max="97" step="1" oninput="updProp('maxW',+this.value)"></div>
         </div>
+        <div id="rbrl" style="display:none;margin-bottom:10px;padding:10px;background:var(--g50);border-radius:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:8px">⚙️ Pengaturan Khusus "Berlaku Sampai"</div>
+          <label class="fl">Jarak antar baris (%)</label>
+          <input type="number" class="fi" id="pbrlgap" min="0" max="30" step="0.5" oninput="updProp('gap',+this.value)" style="margin-bottom:8px">
+          <label class="fl">Tata Letak</label>
+          <div class="g2">
+            <button type="button" class="stab on" id="pbrlV" onclick="updProp('horiz',false)" style="width:100%">↕ Bertumpuk</button>
+            <button type="button" class="stab" id="pbrlH" onclick="updProp('horiz',true)" style="width:100%">↔ Sejajar</button>
+          </div>
+        </div>
         <div id="rsz" style="display:none"><div class="g2"><div><label class="fl">Lebar (%)</label><input type="number" class="fi" id="pw" min="1" max="99" step="0.5" oninput="updProp('w',+this.value)"></div><div><label class="fl">Tinggi (%)</label><input type="number" class="fi" id="ph" min="1" max="99" step="0.5" oninput="updProp('h',+this.value)"></div></div></div>
         <div style="font-size:10px;color:var(--txt3);margin-top:4px;font-family:monospace" id="ppos"></div>
         <button class="btn bgy bsm" id="btnhide" onclick="toggleFieldHidden(S.sel)" style="width:100%;margin-top:10px">👁 Sembunyikan dari Kartu</button>
@@ -652,7 +662,7 @@ const IL={
   nisNisn:{x:29,y:33,fs:11,bold:false,col:'#333'},kelas:{x:29,y:39,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:45,fs:11,bold:false,col:'#333'},
   ttl:{x:29,y:51,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:57,fs:9,bold:false,col:'#333'},alamat:{x:29,y:64,fs:8,bold:false,col:'#333',maxW:50},
   golDarah:{x:29,y:83,fs:11,bold:false,col:'#333'},noHp:{x:29,y:90,fs:10,bold:false,col:'#333'},
-  berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
+  berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20',gap:6,horiz:false},qrCode:{x:79,y:55,w:17,h:17},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
   ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
 };
@@ -935,6 +945,12 @@ function selField(id){
   document.getElementById('rfs').style.display=hasT?'block':'none';document.getElementById('rcol').style.display=hasT?'block':'none';
   document.getElementById('rbold').style.display=hasT?'block':'none';document.getElementById('rsz').style.display=hasS?'block':'none';
   document.getElementById('rwrap').style.display=hasT?'block':'none';
+  document.getElementById('rbrl').style.display=id==='berlakuSampai'?'block':'none';
+  if(id==='berlakuSampai'){
+    document.getElementById('pbrlgap').value=L.gap!==undefined?L.gap:6;document.getElementById('pbrlgap').disabled=S.locked;
+    document.getElementById('pbrlV').classList.toggle('on',!L.horiz);
+    document.getElementById('pbrlH').classList.toggle('on',!!L.horiz);
+  }
   if(hasT){const pf=document.getElementById('pfs');pf.value=L.fs;pf.disabled=S.locked;const pc=document.getElementById('pcol');pc.value=L.col;pc.disabled=S.locked;const pb2=document.getElementById('pbold');pb2.checked=!!L.bold;pb2.disabled=S.locked;
     const pwo=document.getElementById('pwrapon');pwo.checked=L.maxW!==undefined;pwo.disabled=S.locked;
     document.getElementById('rwrapw').style.display=L.maxW!==undefined?'block':'none';
@@ -954,6 +970,8 @@ function updProp(k,v){
   else if(k==='h')L.h=parseFloat(v)||5;
   else if(k==='wrapon'){if(v){L.maxW=Math.max(10,Math.min(97,95-L.x));document.getElementById('rwrapw').style.display='block';document.getElementById('pwrapw').value=L.maxW;}else{delete L.maxW;document.getElementById('rwrapw').style.display='none';}}
   else if(k==='maxW')L.maxW=Math.max(5,parseFloat(v)||30);
+  else if(k==='gap')L.gap=parseFloat(v)||0;
+  else if(k==='horiz'){L.horiz=v;document.getElementById('pbrlV').classList.toggle('on',!v);document.getElementById('pbrlH').classList.toggle('on',!!v);}
   renderChips();
 }
 function toggleGrid(){
@@ -1007,7 +1025,7 @@ function renderChips(){
     else txt=(f.pre||'')+'──'+f.label+'──';
     const d=document.createElement('div');d.style.cssText=`position:absolute;left:${p.x}%;top:${p.y}%;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:.5;line-height:1`;d.textContent=txt;chips.appendChild(d);
   });
-  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){[{t:'*BERLAKU SAMPAI',dy:0,sz:pb.fs*.85,fw:400,fi:'italic'},{t:'dd BULAN YYYY',dy:5.5,sz:pb.fs*1.1,fw:700,fi:'normal'}].forEach(x=>{const d=document.createElement('div');d.style.cssText=`position:absolute;left:${pb.x}%;top:${pb.y+x.dy}%;font-size:${x.sz*sc}px;font-weight:${x.fw};font-style:${x.fi};color:${pb.col};font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:.5;line-height:1`;d.textContent=x.t;chips.appendChild(d);});}
+  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){const gap=pb.gap!==undefined?pb.gap:6,horiz=!!pb.horiz;[{t:'*BERLAKU SAMPAI',dx:0,dy:0,sz:pb.fs*.85,fw:400,fi:'italic'},{t:'dd BULAN YYYY',dx:horiz?gap:0,dy:horiz?0:gap,sz:pb.fs*1.1,fw:700,fi:'normal'}].forEach(x=>{const d=document.createElement('div');d.style.cssText=`position:absolute;left:${pb.x+x.dx}%;top:${pb.y+x.dy}%;font-size:${x.sz*sc}px;font-weight:${x.fw};font-style:${x.fi};color:${pb.col};font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:.5;line-height:1`;d.textContent=x.t;chips.appendChild(d);});}
   FIELDS.forEach(f=>{const p=L[f.id];if(!p)return;const chip=document.createElement('div');chip.className='chip'+(S.sel===f.id?' on':'')+(p.hidden?' hidden-field':'');chip.style.cssText=`left:${p.x}%;top:${p.y}%;background:${f.clr};cursor:${S.locked?'not-allowed':'grab'}`;chip.textContent=(p.hidden?'🚫 ':'⊕ ')+f.label;chip.addEventListener('click',()=>selField(f.id));if(!S.locked)chip.addEventListener('mousedown',e=>startDrag(e,f.id));chips.appendChild(chip);});
 }
 function startDrag(e,id){if(S.locked)return;e.preventDefault();e.stopPropagation();selField(id);const rect=document.getElementById('editor').getBoundingClientRect();S.drag={id,sx:e.clientX,sy:e.clientY,ox:S.layout[id].x,oy:S.layout[id].y,rw:rect.width,rh:rect.height};}
@@ -1304,7 +1322,7 @@ async function renderCard(student,canvas,side){
   const dtLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs*RES_SCALE}px Arial`;ctx.fillStyle=p.col||'#222';const x=p.x/100*CW,y=p.y/100*CH,colonX=x+COLX/100*CW,valX=colonX+8*RES_SCALE;ctx.fillText(label,x,y);ctx.fillText(':',colonX,y);if(p.maxW){const availPx=(p.x+p.maxW)/100*CW-valX;const lines=wrapText(value,availPx);const lh=p.fs*RES_SCALE*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,valX,y+i*lh));}else{ctx.fillText(value,valX,y);}};
   const ss=S.settings;
   dt('nama',student.nama);dtLV('nisNisn','NIS/NISN',student.nisNisn);dtLV('kelas','Kelas',student.kelas||'');dtLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);dtLV('ttl','Tempat Lahir',student.ttl);dtLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));dtLV('alamat','Alamat',student.alamat);dtLV('golDarah','Gol. Darah',student.golDarah);dtLV('noHp','No. HP/WA',student.noHp);dt('tglCetak',fmtDate());dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
-  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85*RES_SCALE)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2*RES_SCALE)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
+  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){const gap=pb.gap!==undefined?pb.gap:6,horiz=!!pb.horiz;ctx.font=`italic ${Math.round(pb.fs*.85*RES_SCALE)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2*RES_SCALE)}px Arial`;if(horiz)ctx.fillText(student.berlakuSampai,(pb.x+gap)/100*CW,pb.y/100*CH);else ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+gap)/100*CH);}
 }
 
 function buildPrevHTML(student,w,h,side){
@@ -1321,7 +1339,7 @@ function buildPrevHTML(student,w,h,side){
     const txLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return'';const boxW=p.maxW?p.maxW:40;const valW=boxW-COLX;const colPx=(COLX/100*w).toFixed(1),valPx=(valW/100*w).toFixed(1);const valStyle=p.maxW?`flex:0 0 ${valPx}px;width:${valPx}px;white-space:normal;line-height:1.35`:`white-space:nowrap`;return`<div class="ptxt" style="left:${(p.x/100*w).toFixed(1)}px;top:${(p.y/100*h).toFixed(1)}px;font-size:${p.fs*sc}px;font-weight:${p.bold?700:400};color:${p.col};display:flex;white-space:nowrap"><span style="flex:0 0 ${colPx}px;width:${colPx}px;min-width:0;max-width:${colPx}px;overflow:hidden;white-space:nowrap;text-overflow:clip">${label}</span><span style="flex:0 0 auto;padding-left:4px">:</span><span style="${valStyle};padding-left:4px">${value}</span></div>`;};
     const ss=S.settings;
     html+=tx('nama',student.nama);html+=txLV('nisNisn','NIS/NISN',student.nisNisn);html+=txLV('kelas','Kelas',student.kelas||'');html+=txLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);html+=txLV('ttl','Tempat Lahir',student.ttl);html+=txLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));html+=txLV('alamat','Alamat',student.alamat);html+=txLV('golDarah','Gol. Darah',student.golDarah);html+=txLV('noHp','No. HP/WA',student.noHp);html+=tx('tglCetak',fmtDate());html+=tx('labelKepala',ss.labelKepala);html+=tx('namaKepala',ss.namaKepala);html+=tx('nip',ss.nip);
-    const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${(pb.y/100*h).toFixed(1)}px;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${((pb.y+5)/100*h).toFixed(1)}px;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
+    const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){const gap=pb.gap!==undefined?pb.gap:6,horiz=!!pb.horiz;html+=`<div class="ptxt" style="left:${(pb.x/100*w).toFixed(1)}px;top:${(pb.y/100*h).toFixed(1)}px;font-size:${pb.fs*.85*sc}px;font-style:italic;color:${pb.col}">*BERLAKU SAMPAI</div>`;const vx=horiz?((pb.x+gap)/100*w).toFixed(1):(pb.x/100*w).toFixed(1);const vy=horiz?(pb.y/100*h).toFixed(1):((pb.y+gap)/100*h).toFixed(1);html+=`<div class="ptxt" style="left:${vx}px;top:${vy}px;font-size:${pb.fs*1.1*sc}px;font-weight:700;color:${pb.col}">${student.berlakuSampai}</div>`;}
   }
   html+='</div>';return html;
 }
