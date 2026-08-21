@@ -422,15 +422,28 @@ function toggleEdit(){
   document.getElementById('savedmsg').style.display='none';
 }
 
+function fotoStoragePath(url){
+  if(!url||!url.includes('/foto-siswa/'))return null;
+  return url.split('/foto-siswa/')[1]?.split('?')[0]||null;
+}
+async function deleteFotoSB(url){
+  const path=fotoStoragePath(url);
+  if(!path)return;
+  try{await SB.storage.from('foto-siswa').remove([path]);}catch(e){/* abaikan, jangan sampai gagal simpan cuma gara-gara ini */}
+}
+
 async function simpanEdit(){
   // Sesuai keputusan: LANGSUNG update ke database, tanpa approval admin
   const btn=event.target;btn.disabled=true;btn.textContent='Menyimpan...';
   try{
     let photoUrl=current.photo;
+    const oldPhoto=current.photo;
     if(editPhotoValue&&editPhotoValue.startsWith('data:')){
       photoUrl=await uploadEditPhoto(editPhotoValue,document.getElementById('enama').value.trim()||current.nama);
+      if(oldPhoto&&oldPhoto!==photoUrl)await deleteFotoSB(oldPhoto);
     }else if(editPhotoValue!==null){
       photoUrl=editPhotoValue; // link URL langsung
+      if(oldPhoto&&oldPhoto!==photoUrl)await deleteFotoSB(oldPhoto);
     }
     const upd={
       nama:document.getElementById('enama').value.trim()||current.nama,
