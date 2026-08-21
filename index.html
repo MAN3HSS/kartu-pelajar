@@ -200,7 +200,7 @@ const IL={
   nisNisn:{x:29,y:33,fs:11,bold:false,col:'#333'},kelas:{x:29,y:39,fs:11,bold:false,col:'#00838f'},jenisKelamin:{x:29,y:45,fs:11,bold:false,col:'#333'},
   ttl:{x:29,y:51,fs:9,bold:false,col:'#333'},tanggalLahir:{x:29,y:57,fs:9,bold:false,col:'#333'},alamat:{x:29,y:64,fs:8,bold:false,col:'#333',maxW:50},
   golDarah:{x:29,y:83,fs:11,bold:false,col:'#333'},noHp:{x:29,y:90,fs:10,bold:false,col:'#333'},
-  berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20'},qrCode:{x:79,y:55,w:17,h:17},
+  berlakuSampai:{x:3,y:90,fs:10,bold:true,col:'#1b5e20',gap:6,horiz:false},qrCode:{x:79,y:55,w:17,h:17},
   tglCetak:{x:54,y:79,fs:9,bold:false,col:'#555'},labelKepala:{x:54,y:84,fs:9,bold:false,col:'#555'},
   ttdImg:{x:54,y:62,w:16,h:16},namaKepala:{x:54,y:90,fs:10,bold:true,col:'#222'},nip:{x:54,y:95,fs:9,bold:false,col:'#555'},
 };
@@ -225,7 +225,7 @@ async function renderCard(student,canvas,side,ctxData){
   const dt=(id,text)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs*RES_SCALE}px Arial`;ctx.fillStyle=p.col||'#222';if(p.maxW){const lines=wrapText(text,p.maxW/100*CW);const lh=p.fs*RES_SCALE*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,p.x/100*CW,p.y/100*CH+i*lh));}else{ctx.fillText(text,p.x/100*CW,p.y/100*CH);}};
   const dtLV=(id,label,value)=>{const p=L[id];if(!p||!p.fs||p.hidden)return;ctx.font=`${p.bold?'bold ':''}${p.fs*RES_SCALE}px Arial`;ctx.fillStyle=p.col||'#222';const x=p.x/100*CW,y=p.y/100*CH,colonX=x+COLX/100*CW,valX=colonX+8*RES_SCALE;ctx.fillText(label,x,y);ctx.fillText(':',colonX,y);if(p.maxW){const availPx=(p.x+p.maxW)/100*CW-valX;const lines=wrapText(value,availPx);const lh=p.fs*RES_SCALE*1.3;lines.forEach((ln,i)=>ctx.fillText(ln,valX,y+i*lh));}else{ctx.fillText(value,valX,y);}};
   dt('nama',student.nama);dtLV('nisNisn','NIS/NISN',student.nisNisn);dtLV('kelas','Kelas',student.kelas||'');dtLV('jenisKelamin','Jenis Kelamin',student.jenisKelamin);dtLV('ttl','Tempat Lahir',student.ttl);dtLV('tanggalLahir','Tanggal Lahir',fmtTglLahir(student.tanggalLahir));dtLV('alamat','Alamat',student.alamat);dtLV('golDarah','Gol. Darah',student.golDarah);dtLV('noHp','No. HP/WA',student.noHp);dt('tglCetak',fmtDate(ss.kota));dt('labelKepala',ss.labelKepala);dt('namaKepala',ss.namaKepala);dt('nip',ss.nip);
-  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){ctx.font=`italic ${Math.round(pb.fs*.85*RES_SCALE)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2*RES_SCALE)}px Arial`;ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+6)/100*CH);}
+  const pb=L.berlakuSampai;if(pb&&pb.fs&&!pb.hidden){const gap=pb.gap!==undefined?pb.gap:6,horiz=!!pb.horiz;ctx.font=`italic ${Math.round(pb.fs*.85*RES_SCALE)}px Arial`;ctx.fillStyle=pb.col;ctx.fillText('*BERLAKU SAMPAI',pb.x/100*CW,pb.y/100*CH);ctx.font=`bold ${Math.round(pb.fs*1.2*RES_SCALE)}px Arial`;if(horiz)ctx.fillText(student.berlakuSampai,(pb.x+gap)/100*CW,pb.y/100*CH);else ctx.fillText(student.berlakuSampai,pb.x/100*CW,(pb.y+gap)/100*CH);}
 }
 
 async function loadSettings(){
@@ -329,10 +329,16 @@ async function cariSiswa(){
   if(!nis||!ttlInput){err.textContent='Isi NIS/NISN dan tanggal lahir dulu ya.';err.style.display='block';return;}
   const btn=document.querySelector('.btn-primary');btn.disabled=true;btn.textContent='Mencari...';
   try{
-    const{data,error}=await SB.from('siswa').select('*').eq('nis_nisn',nis);
+    // Ambil kandidat yang mengandung angka yang diketik (biar bisa cocok walau nis_nisn formatnya gabungan "NIS/NISN")
+    const{data,error}=await SB.from('siswa').select('*').ilike('nis_nisn',`%${nis}%`);
     if(error)throw error;
+    const cocokNisNisn=r=>{
+      if(!r.nis_nisn)return false;
+      if(r.nis_nisn.trim()===nis)return true; // sama persis
+      return r.nis_nisn.split('/').map(x=>x.trim()).includes(nis); // salah satu bagian (NIS atau NISN) cocok
+    };
     // Prioritaskan kolom tanggal_lahir (akurat); fallback ke TTL bebas untuk data lama
-    const found=(data||[]).find(r=>r.tanggal_lahir?r.tanggal_lahir===ttlInput:extractTglFromTTL(r.ttl)===ttlInput);
+    const found=(data||[]).find(r=>cocokNisNisn(r)&&(r.tanggal_lahir?r.tanggal_lahir===ttlInput:extractTglFromTTL(r.ttl)===ttlInput));
     if(!found){err.textContent='Data tidak ditemukan. Pastikan NIS/NISN dan tanggal lahir sudah benar, atau hubungi TU sekolah.';err.style.display='block';return;}
     err.style.display='none';
     current={
