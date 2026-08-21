@@ -571,6 +571,15 @@ input[type=range]{width:100%;accent-color:var(--g600)}
           <div id="pvnip" style="font-size:12px;color:var(--txt2)"></div>
         </div>
       </div>
+      <div class="card">
+        <div class="ctitle">🧹 Bersihkan Foto Tidak Terpakai</div>
+        <p style="font-size:12px;color:var(--txt3);margin-bottom:12px">Cari foto di Supabase Storage yang sudah tidak dipakai siswa manapun (misal dari siswa yang dihapus sebelum fitur pembersihan otomatis ada), lalu hapus biar tidak numpuk percuma.</p>
+        <button class="btn bb bl bsm" onclick="cariFotoYatim()">🔍 Cari Foto Tidak Terpakai</button>
+        <div id="fotoYatimResult" style="display:none;margin-top:12px">
+          <div class="ibox" id="fotoYatimInfo" style="margin-bottom:10px"></div>
+          <button class="btn bl bsm" id="btnHapusYatim" style="background:#ffebee;color:var(--red);border:1px solid #ffcdd2" onclick="hapusFotoYatim()">🗑 Hapus Semua Foto Tidak Terpakai Ini</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1055,7 +1064,10 @@ function recropCurrent(){
   openCropModal(S.curPhoto,async(cropped)=>{
     S.curPhoto=await compressDataUrl(cropped);
     document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
-    document.getElementById('phl').textContent='✅ Foto terupload';
+    document.getElementById('phl').textContent='✅ Foto terupload (hasil crop)';
+    setPhotoMode('upload');
+    const fl=document.getElementById('fphotolink');if(fl)fl.value='';
+    toast('Foto sudah di-crop. Klik Simpan biar tersimpan permanen ke database ✅');
   });
 }
 async function pickPhoto(inp){
@@ -1065,6 +1077,7 @@ async function pickPhoto(inp){
     S.curPhoto=await compressDataUrl(cropped);
     document.getElementById('pht').innerHTML=`<img src="${S.curPhoto}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`;
     document.getElementById('phl').textContent='✅ Foto terupload';
+    const fl=document.getElementById('fphotolink');if(fl)fl.value='';
   });
   inp.value='';
 }
@@ -1083,16 +1096,20 @@ async function saveSiswa(){
     showOv('Menyimpan data...');
     // Upload foto ke Storage jika ada dan masih base64 — kalau gagal, JANGAN timpa foto lama dengan kosong
     let photoUrl=s.photo,uploadFailed=false,uploadErrMsg='';
+    const oldPhoto=eid?(S.students.find(x=>x.id===eid)||{}).photo:null;
     if(s.photo&&s.photo.startsWith('data:')){
       const up=await uploadFotoSB(s.photo,s.nama);
       if(up.error){
         uploadFailed=true;
         uploadErrMsg=up.error.message||'Bucket Storage "foto-siswa" belum dibuat / tidak bisa diakses';
-        const old=eid?S.students.find(x=>x.id===eid):null;
-        photoUrl=old?old.photo:null;
+        photoUrl=oldPhoto||null;
       }else{
         photoUrl=up.url;
+        if(oldPhoto&&oldPhoto!==photoUrl)await deleteFotoSB(oldPhoto); // foto lama sudah diganti, bersihkan biar tidak numpuk
       }
+    }else if(oldPhoto&&oldPhoto!==photoUrl){
+      // Foto diganti ke link luar (atau dihapus) tanpa upload file baru — foto lama di Storage tetap perlu dibersihkan
+      await deleteFotoSB(oldPhoto);
     }
     const rec={nama:s.nama,nis_nisn:s.nisNisn,kelas:s.kelas,jenis_kelamin:s.jenisKelamin,ttl:s.ttl,tanggal_lahir:s.tanggalLahir||null,alamat:s.alamat,gol_darah:s.golDarah,no_hp:s.noHp,no_rfid:s.noRfid,berlaku_sampai:s.berlakuSampai,photo_url:photoUrl};
     let error;
@@ -1121,9 +1138,66 @@ function editSiswa(id){const s=S.students.find(x=>x.id===id);if(!s)return;docume
   setPhotoMode(isLink?'link':'upload');if(isLink)document.getElementById('fphotolink').value=s.photo;
   document.getElementById('btnsave').textContent='💾 Update';openFormModal('edit');}
 
+function fotoStoragePath(url){
+  if(!url||!url.includes('/foto-siswa/'))return null;
+  return url.split('/foto-siswa/')[1]?.split('?')[0]||null;
+}
+let fotoYatimList=[];
+async function cariFotoYatim(){
+  if(!SB){toast('Supabase belum terhubung','err');return;}
+  const btn=event.target;btn.disabled=true;btn.textContent='Mencari...';
+  try{
+    const{data:files,error}=await SB.storage.from('foto-siswa').list('',{limit:1000,sortBy:{column:'created_at',order:'desc'}});
+    if(error)throw error;
+    const dipakai=new Set(S.students.map(s=>fotoStoragePath(s.photo)).filter(Boolean));
+    fotoYatimList=(files||[]).filter(f=>f.name&&!dipakai.has(f.name));
+    const info=document.getElementById('fotoYatimInfo');
+    const totalSize=fotoYatimList.reduce((a,f)=>a+(f.metadata?.size||0),0);
+    const mb=(totalSize/1024/1024).toFixed(2);
+    if(fotoYatimList.length===0){
+      info.innerHTML=`✅ Semua foto di Storage (${(files||[]).length} file) masih terpakai. Tidak ada yang perlu dibersihkan.`;
+      document.getElementById('btnHapusYatim').style.display='none';
+    }else{
+      info.innerHTML=`Ditemukan <b>${fotoYatimList.length} foto</b> tidak terpakai (≈${mb} MB) dari total ${(files||[]).length} file di Storage.`;
+      document.getElementById('btnHapusYatim').style.display='block';
+    }
+    document.getElementById('fotoYatimResult').style.display='block';
+  }catch(e){
+    toast('Gagal cari foto: '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent='🔍 Cari Foto Tidak Terpakai';
+  }
+}
+async function hapusFotoYatim(){
+  if(!fotoYatimList.length)return;
+  if(!confirm(`Hapus PERMANEN ${fotoYatimList.length} foto tidak terpakai dari Supabase Storage? Tidak bisa dibatalkan.`))return;
+  showOv(`Menghapus ${fotoYatimList.length} foto tidak terpakai...`);
+  try{
+    const names=fotoYatimList.map(f=>f.name);
+    const{error}=await SB.storage.from('foto-siswa').remove(names);
+    if(error)throw error;
+    toast(`🗑 ${names.length} foto tidak terpakai berhasil dihapus ✅`);
+    fotoYatimList=[];
+    document.getElementById('fotoYatimResult').style.display='none';
+  }catch(e){
+    toast('Gagal hapus: '+e.message,'err');
+  }finally{
+    hideOv();
+  }
+}
+async function deleteFotoSB(url){
+  const path=fotoStoragePath(url);
+  if(!path)return; // bukan file di Storage kita (misal link luar) — tidak perlu dihapus
+  try{await SB.storage.from('foto-siswa').remove([path]);}catch(e){/* biarkan, jangan sampai gagal hapus data cuma gara-gara ini */}
+}
 async function hapusSiswa(id){
   const s=S.students.find(x=>x.id===id);if(!confirm(`Hapus ${s?.nama||'ini'}?`))return;
-  if(SB){const{error}=await SB.from('siswa').delete().eq('id',id);if(error){toast('Gagal hapus: '+error.message,'err');return;}await loadFromDB();}
+  if(SB){
+    const{error}=await SB.from('siswa').delete().eq('id',id);
+    if(error){toast('Gagal hapus: '+error.message,'err');return;}
+    if(s?.photo)await deleteFotoSB(s.photo);
+    await loadFromDB();
+  }
   else{S.students=S.students.filter(x=>x.id!==id);document.getElementById('sbcnt').textContent=S.students.length;renderList();fillSel();}
   toast('Data dihapus','warn');
 }
@@ -1201,8 +1275,10 @@ async function hapusMassal(){
   try{
     const ids=[...selectedIds];
     if(SB){
+      const fotoUrls=S.students.filter(s=>ids.includes(s.id)&&s.photo).map(s=>s.photo);
       const{error}=await SB.from('siswa').delete().in('id',ids);
       if(error)throw error;
+      await Promise.all(fotoUrls.map(url=>deleteFotoSB(url)));
       await loadFromDB();
     }else{
       S.students=S.students.filter(s=>!ids.includes(s.id));
